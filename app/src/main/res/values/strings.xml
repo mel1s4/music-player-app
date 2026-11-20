@@ -12,6 +12,7 @@
     <!-- Dashboard -->
     <string name="dashboard_library">Your library</string>
     <string name="dashboard_nothing_scanned">Nothing scanned yet.</string>
+    <string name="dashboard_rescan">Rescan</string>
     <plurals name="song_count">
         <item quantity="one">%d song</item>
         <item quantity="other">%d songs</item>
@@ -161,6 +162,7 @@
     <string name="sort_by">Sort</string>
     <string name="sort_title">Title</string>
     <string name="sort_duration">Duration</string>
+    <string name="sort_date_added">Date Added</string>
     <string name="search_recent">Recent searches</string>
     <string name="search_clear_recent">Clear</string>
 

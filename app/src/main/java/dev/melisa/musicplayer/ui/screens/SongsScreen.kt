@@ -63,7 +63,7 @@ import dev.melisa.musicplayer.ui.theme.cyberClick
 import java.text.Normalizer
 import kotlinx.coroutines.launch
 
-private enum class TrackSort { Title, Artist, Duration }
+private enum class TrackSort { DateAdded, Title, Artist, Duration }
 
 /** A run of songs that share an initial, with "#" for anything that is not a letter. */
 private data class SongSection(val label: String, val tracks: List<Track>)
@@ -82,6 +82,7 @@ private fun sectionLabelFor(text: String): String {
 @Composable
 fun SongsScreen(
     tracks: List<Track>?,
+    addedAt: Map<String, Long>,
     currentTrackUri: String?,
     isPlaying: Boolean,
     hasLibraries: Boolean,
@@ -97,11 +98,15 @@ fun SongsScreen(
     onOpenAlbums: () -> Unit,
     onOpenArtists: () -> Unit,
 ) {
-    var sort by rememberSaveable { mutableStateOf(TrackSort.Title) }
+    var sort by rememberSaveable { mutableStateOf(TrackSort.DateAdded) }
     var sortMenu by rememberSaveable { mutableStateOf(false) }
 
-    val sorted = remember(tracks, sort) {
+    val sorted = remember(tracks, sort, addedAt) {
         when (sort) {
+            TrackSort.DateAdded -> tracks.orEmpty().sortedWith(
+                compareByDescending<Track> { addedAt[it.uri.toString()] ?: 0L }
+                    .thenBy { sortKey(it.title) },
+            )
             TrackSort.Title -> tracks.orEmpty().sortedBy { sortKey(it.title) }
             TrackSort.Artist -> tracks.orEmpty().sortedWith(
                 compareBy({ sortKey(it.artist.orEmpty()) }, { sortKey(it.title) }),
@@ -111,9 +116,9 @@ fun SongsScreen(
     }
 
     // Sections and the letter rail only exist for the alphabetical orders; duration
-    // sorting has no alphabet to jump through.
+    // and date sorting have no alphabet to jump through.
     val sections = remember(sorted, sort) {
-        if (sort == TrackSort.Duration) {
+        if (sort == TrackSort.Duration || sort == TrackSort.DateAdded) {
             emptyList()
         } else {
             val grouped = linkedMapOf<String, MutableList<Track>>()
@@ -121,7 +126,7 @@ fun SongsScreen(
                 val label = when (sort) {
                     TrackSort.Title -> sectionLabelFor(track.title)
                     TrackSort.Artist -> sectionLabelFor(track.artist.orEmpty())
-                    TrackSort.Duration -> "#"
+                    TrackSort.Duration, TrackSort.DateAdded -> "#"
                 }
                 grouped.getOrPut(label) { mutableListOf() }.add(track)
             }
@@ -454,6 +459,7 @@ private fun BrowseTile(
 }
 
 private fun TrackSort.labelRes(): Int = when (this) {
+    TrackSort.DateAdded -> R.string.sort_date_added
     TrackSort.Title -> R.string.sort_title
     TrackSort.Artist -> R.string.field_artist
     TrackSort.Duration -> R.string.sort_duration

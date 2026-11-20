@@ -172,7 +172,7 @@ that state is false; no decorative animation runs forever on a static screen.
 
 **Dashboard**
 - Hero panel answers "what do I have?" (songs / storage used / hours) and "what do I do?"
-  (Play all / Shuffle) in one card. Storage is the sum of track file sizes, shown in MB
+  (Rescan / Free up space) in one card. Storage is the sum of track file sizes, shown in MB
   or GB; if a provider reports no sizes it falls back to the album count.
 - **"Recently added" is the first section under the hero**: the five newest tracks with
   cover tile, artist and a locale-aware relative stamp ("hace 40 min", "11 sept").
@@ -186,7 +186,8 @@ that state is false; no decorative animation runs forever on a static screen.
 - Empty library becomes a real empty state with a route to Settings.
 
 **Songs**
-- Count badge, **sort menu (title / artist / duration)**, shuffle-all, and three large
+- Count badge, **sort menu (date added / title / artist / duration)** defaulting to newest
+  added first, shuffle-all, and three large
   browse tiles (Files, Albums, Artists) that replaced three small outlined pills.
 
 **Search**

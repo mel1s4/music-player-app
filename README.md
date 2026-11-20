@@ -11,7 +11,11 @@ account, no upload, no network permission.
 [![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?logo=jetpackcompose&logoColor=white)](#tech-stack)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Status: early](https://img.shields.io/badge/status-early%20development-orange)
+[![Latest release](https://img.shields.io/github/v/release/mel1s4/music-player-app?sort=semver)](https://github.com/mel1s4/music-player-app/releases/latest)
 [![Android CI](https://github.com/mel1s4/music-player-app/actions/workflows/android.yml/badge.svg)](https://github.com/mel1s4/music-player-app/actions/workflows/android.yml)
+
+**Download:** [latest signed APK](https://github.com/mel1s4/music-player-app/releases/latest)
+(Android 8.0+) · or build it yourself with the instructions below.
 
 ## Why this app
 
@@ -32,13 +36,15 @@ notes, palette, contrast measurements and motion inventory are in
 
 - **Multiple library folders** picked through the Storage Access Framework. No broad
   storage permission and no access to anything you did not explicitly grant.
+- **Dashboard** with library counts, recently added tracks, most liked/disliked lists,
+  and one-tap **Rescan** / **Free up space** actions.
 - **Fast launches** — the last completed scan is painted immediately from the local
   metadata cache while a fresh scan runs behind it. A slim top-bar sweep shows the
   refresh; your library stays usable.
 - **Incremental scanning** — file metadata is cached by URI, size and modification time,
   so only new or edited files are reopened. Deleted files are pruned from the cache.
-- **Songs view** with title / artist / duration sorting, an alphabet rail, and a
-  count badge.
+- **Songs view** with date added / title / artist / duration sorting (date added is the
+  default), an alphabet rail, and a count badge.
 - **Albums and artists** collected from track tags, with cover art and per-collection
   pages that open inside the tab (playback controls stay visible).
 - **Files browser** with a scrollable breadcrumb, per-folder song counts, and

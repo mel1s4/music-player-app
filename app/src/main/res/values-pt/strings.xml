@@ -9,6 +9,7 @@
 
     <string name="dashboard_library">Sua biblioteca</string>
     <string name="dashboard_nothing_scanned">Nada foi escaneado ainda.</string>
+    <string name="dashboard_rescan">Reescanear</string>
     <plurals name="song_count">
         <item quantity="one">%d música</item>
         <item quantity="other">%d músicas</item>
@@ -156,6 +157,7 @@
     <string name="sort_by">Ordenar</string>
     <string name="sort_title">Título</string>
     <string name="sort_duration">Duração</string>
+    <string name="sort_date_added">Data de adição</string>
     <string name="search_recent">Buscas recentes</string>
     <string name="search_clear_recent">Limpar</string>
 

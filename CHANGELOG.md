@@ -23,9 +23,11 @@ The first public release.
   user-granted folders and no broad storage permission.
 - Background playback with AndroidX Media3: notification, lock-screen controls, audio
   focus and headphone-unplug handling.
-- Dashboard with library counts, recent additions, most-liked/disliked lists and
-  continue-listening card.
+- Dashboard with library counts, recent additions, most-liked/disliked lists,
+  continue-listening card, and one-tap **Rescan** / **Free up space** actions.
 - Songs, Albums, Artists, Files, Search and Playlists sections.
+- Songs default to **date added** (newest first), with title, artist and duration also
+  available from the sort menu.
 - Folder breadcrumbs, per-folder counts and **starred folders** pinned at the Files root.
 - Signed ratings, favourites, free-form tags, manual playlists and tag-driven dynamic
   playlists.

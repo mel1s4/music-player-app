@@ -26,8 +26,9 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RestartAlt
-import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -85,8 +86,8 @@ fun DashboardScreen(
     nowPlaying: Track?,
     isPlaying: Boolean,
     onPlay: (Track) -> Unit,
-    onPlayAll: () -> Unit,
-    onShuffleAll: () -> Unit,
+    onRescan: () -> Unit,
+    onFreeSpace: () -> Unit,
     onOpenPlayer: () -> Unit,
     onOpenSettings: () -> Unit,
     onFilesDeleted: () -> Unit,
@@ -140,9 +141,8 @@ fun DashboardScreen(
                     albums = albums,
                     sizeBytes = sizeBytes,
                     hours = hours,
-                    canPlay = songs > 0,
-                    onPlayAll = onPlayAll,
-                    onShuffleAll = onShuffleAll,
+                    onRescan = onRescan,
+                    onFreeSpace = onFreeSpace,
                 )
             }
 
@@ -370,16 +370,15 @@ fun DashboardScreen(
     }
 }
 
-/** The first thing on screen: how big the library is and the two ways to start it. */
+/** The first thing on screen: how big the library is and the two upkeep actions. */
 @Composable
 private fun LibraryHero(
     songs: Int,
     albums: Int,
     sizeBytes: Long,
     hours: Double,
-    canPlay: Boolean,
-    onPlayAll: () -> Unit,
-    onShuffleAll: () -> Unit,
+    onRescan: () -> Unit,
+    onFreeSpace: () -> Unit,
 ) {
     neonGlowPanel {
         Column(modifier = Modifier.padding(22.dp)) {
@@ -422,20 +421,20 @@ private fun LibraryHero(
             Spacer(Modifier.height(20.dp))
 
             // Two CTAs side by side at normal type sizes; stacked once the user
-            // enlarges text, because "Reproducir" must never be cut to "Reproduc".
+            // enlarges text, because "Free up space" must never be cut off.
             val stackedActions = androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.15f
             if (stackedActions) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    PlayAllButton(canPlay, onPlayAll, Modifier.fillMaxWidth())
-                    ShuffleButton(canPlay, onShuffleAll, Modifier.fillMaxWidth())
+                    RescanButton(onRescan, Modifier.fillMaxWidth())
+                    FreeUpSpaceButton(onFreeSpace, Modifier.fillMaxWidth())
                 }
             } else {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    PlayAllButton(canPlay, onPlayAll, Modifier.weight(1f))
-                    ShuffleButton(canPlay, onShuffleAll, Modifier.weight(1f))
+                    RescanButton(onRescan, Modifier.weight(1f))
+                    FreeUpSpaceButton(onFreeSpace, Modifier.weight(1f))
                 }
             }
         }
@@ -709,10 +708,9 @@ private fun neonGlowPanel(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun PlayAllButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun RescanButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Button(
         onClick = onClick,
-        enabled = enabled,
         modifier = modifier
             .height(54.dp)
             .neonGlow(
@@ -721,17 +719,16 @@ private fun PlayAllButton(enabled: Boolean, onClick: () -> Unit, modifier: Modif
                 shape = RoundedCornerShape(16.dp),
             ),
         shape = RoundedCornerShape(16.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
-            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         ),
     ) {
-        Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(22.dp))
+        Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(22.dp))
         Spacer(Modifier.width(8.dp))
         Text(
-            text = stringResource(R.string.playlist_play_all),
+            text = stringResource(R.string.dashboard_rescan),
             style = MaterialTheme.typography.labelLarge,
             maxLines = 1,
         )
@@ -739,17 +736,17 @@ private fun PlayAllButton(enabled: Boolean, onClick: () -> Unit, modifier: Modif
 }
 
 @Composable
-private fun ShuffleButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun FreeUpSpaceButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     OutlinedButton(
         onClick = onClick,
-        enabled = enabled,
         modifier = modifier.height(54.dp),
         shape = RoundedCornerShape(16.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp),
     ) {
-        Icon(Icons.Filled.Shuffle, contentDescription = null, modifier = Modifier.size(20.dp))
+        Icon(Icons.Filled.Storage, contentDescription = null, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(8.dp))
         Text(
-            text = stringResource(R.string.action_shuffle),
+            text = stringResource(R.string.settings_free_space),
             style = MaterialTheme.typography.labelLarge,
             maxLines = 1,
         )

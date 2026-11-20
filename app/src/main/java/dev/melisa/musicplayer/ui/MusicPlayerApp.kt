@@ -691,16 +691,15 @@ fun MusicPlayerApp(settings: AppSettings) {
                             nowPlaying = nowPlaying,
                             isPlaying = isPlaying,
                             onPlay = { play(it) },
-                            onPlayAll = {
-                                tracks?.takeIf { it.isNotEmpty() }?.let { play(it.first(), it, shuffle = false) }
-                            },
-                            onShuffleAll = { shuffleEverything() },
+                            onRescan = { refreshToken++ },
+                            onFreeSpace = { showFreeSpace = true },
                             onOpenPlayer = { showNowPlaying = true },
                             onOpenSettings = { navigate(Destination.Settings) },
                             onFilesDeleted = { refreshToken++ },
                         )
                         Destination.Songs -> SongsScreen(
                             tracks = tracks,
+                            addedAt = extras.addedAt,
                             currentTrackUri = nowPlaying?.uri?.toString(),
                             isPlaying = isPlaying,
                             hasLibraries = settings.libraries.isNotEmpty(),
