@@ -14,8 +14,17 @@ account, no upload, no network permission.
 [![Latest release](https://img.shields.io/github/v/release/mel1s4/music-player-app?sort=semver)](https://github.com/mel1s4/music-player-app/releases/latest)
 [![Android CI](https://github.com/mel1s4/music-player-app/actions/workflows/android.yml/badge.svg)](https://github.com/mel1s4/music-player-app/actions/workflows/android.yml)
 
-**Download:** [latest signed APK](https://github.com/mel1s4/music-player-app/releases/latest)
-(Android 8.0+) · or build it yourself with the instructions below.
+## Download
+
+[**Download the latest signed APK →**](https://github.com/mel1s4/music-player-app/releases/latest)
+
+- **Android 8.0 (API 26) or newer.**
+- The release page includes a **SHA-256 checksum**; verify it before installing.
+- GitHub Releases is the official distribution channel; the latest version is
+  [v0.1.0](https://github.com/mel1s4/music-player-app/releases/tag/v0.1.0).
+- Prefer to build it yourself? See [Build and run](#build-and-run).
+- Already have a debug/test build installed? Uninstall it first — Android will not
+  update across different signing keys.
 
 ## Why this app
 
