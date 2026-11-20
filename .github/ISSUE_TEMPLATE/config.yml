@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/mel1s4/music-player-app/security/advisories/new
+    about: Please report security issues privately, never in a public issue.
+  - name: Contributing guide
+    url: https://github.com/mel1s4/music-player-app/blob/main/CONTRIBUTING.md
+    about: Read the development setup and pull-request expectations first.

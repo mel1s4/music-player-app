@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Equalizer: the app's own "live bars" motif, one accent colour. -->
+    <path
+        android:pathData="M28,64 L28,76"
+        android:strokeColor="#45F5A0"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M41.5,52 L41.5,76"
+        android:strokeColor="#45F5A0"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M55,36 L55,76"
+        android:strokeColor="#45F5A0"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M68.5,48 L68.5,76"
+        android:strokeColor="#45F5A0"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M82,60 L82,76"
+        android:strokeColor="#45F5A0"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+</vector>

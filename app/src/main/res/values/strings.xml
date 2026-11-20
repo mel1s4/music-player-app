@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Music Player</string>
+
+    <!-- Navigation -->
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_songs">Songs</string>
+    <string name="nav_settings">Settings</string>
+    <string name="menu_open">Open menu</string>
+    <string name="drawer_subtitle">Local library</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_library">Your library</string>
+    <string name="dashboard_nothing_scanned">Nothing scanned yet.</string>
+    <plurals name="song_count">
+        <item quantity="one">%d song</item>
+        <item quantity="other">%d songs</item>
+    </plurals>
+    <string name="stat_songs">Songs</string>
+    <string name="stat_albums">Albums</string>
+    <string name="stat_hours">Hours</string>
+    <string name="recently_played">Recently played</string>
+    <string name="recently_played_empty">Nothing yet — play a song and it will show up here.</string>
+
+    <!-- Songs -->
+    <string name="songs_empty_title">No songs yet</string>
+    <string name="songs_empty_body">No audio files found in the folders you added.</string>
+
+    <!-- Settings -->
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_theme">Theme</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_holding_hand">Holding hand</string>
+    <string name="settings_holding_hand_hint">Places controls on the side you hold the phone with.</string>
+    <string name="hand_left">Left</string>
+    <string name="hand_right">Right</string>
+
+    <!-- Libraries -->
+    <string name="settings_libraries">Libraries</string>
+    <string name="libraries_hint">Android gives this app access only to the folders you pick here.</string>
+    <string name="libraries_empty">No folders added yet.</string>
+    <string name="libraries_add">Add folder</string>
+    <string name="libraries_remove">Remove folder</string>
+
+    <string name="settings_playback">Playback</string>
+    <string name="settings_scan_on_launch">Scan on launch</string>
+    <string name="settings_scan_on_launch_desc">Index your music when the app opens</string>
+    <string name="settings_album_art">Show album art</string>
+    <string name="settings_album_art_desc">Load artwork from your library</string>
+
+    <string name="settings_about">About</string>
+    <string name="about_version">Version</string>
+    <string name="about_package">Package</string>
+    <string name="about_min_android">Minimum Android</string>
+    <string name="min_android_value">Android 8.0 (API 26)</string>
+    <string name="songs_no_library_title">No libraries yet</string>
+    <string name="songs_no_library_body">Add a folder in Settings to get started.</string>
+    <string name="songs_scanning">Scanning your folders…</string>
+    <string name="action_play">Play</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_more">More options</string>
+    <string name="now_playing">Now playing</string>
+    <string name="action_close">Close</string>
+    <string name="action_shuffle">Shuffle</string>
+    <string name="action_previous">Previous</string>
+    <string name="action_next">Next</string>
+    <string name="action_love">Love</string>
+    <string name="action_add_to_playlist">Add to playlist</string>
+    <string name="action_manage_tags">Manage tags</string>
+    <string name="playlists">Playlists</string>
+    <string name="playlists_empty">No playlists yet.</string>
+    <string name="playlist_new">New playlist</string>
+    <string name="playlist_name">Playlist name</string>
+    <string name="action_create">Create</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="tags_title">Tags</string>
+    <string name="tags_empty">No tags yet.</string>
+    <string name="tags_hint">Add a tag</string>
+    <string name="action_add">Add</string>
+    <string name="tags_note">Tags are stored in the library and copied into each file’s metadata when the format supports it.</string>
+    <string name="action_done">Done</string>
+    <string name="no_artist">Unknown artist</string>
+    <string name="nav_playlists">Playlists</string>
+    <string name="playlist_dynamic">Dynamic</string>
+    <string name="playlist_filter_tag">Filter by tag (optional)</string>
+    <string name="playlist_filter_hint">Leave empty for a manual playlist</string>
+    <string name="playlist_edit_title">Edit playlist</string>
+    <string name="playlist_delete">Delete playlist</string>
+    <string name="playlist_delete_confirm">Delete “%1$s”? This can\'t be undone.</string>
+    <string name="playlist_remove_track">Remove from playlist</string>
+    <string name="playlist_empty">This playlist is empty.</string>
+    <string name="playlist_dynamic_empty">No songs carry this tag yet.</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_back">Back</string>
+    <string name="action_save">Save</string>
+    <string name="nav_menu">Menu</string>
+    <string name="action_edit_song">Edit song</string>
+    <string name="edit_metadata_title">Song metadata</string>
+    <string name="field_title">Title</string>
+    <string name="field_artist">Artist</string>
+    <string name="field_album">Album</string>
+    <string name="field_album_artist">Album artist</string>
+    <string name="field_year">Year</string>
+    <string name="field_track">Track</string>
+    <string name="field_disc">Disc</string>
+    <string name="field_genre">Genre</string>
+    <string name="field_comment">Comment</string>
+    <string name="metadata_reading">Reading tags…</string>
+    <string name="metadata_saving">Saving…</string>
+    <string name="metadata_write_failed">Couldn\'t write tags to this file.</string>
+    <string name="metadata_no_write_permission">This folder was added read-only. Remove it in Settings and add it again to allow editing.</string>
+    <string name="playlist_play_all">Play all</string>
+    <string name="field_file_name">File name</string>
+    <string name="field_folder">Folder</string>
+    <string name="metadata_rename_failed">Couldn\'t rename the file.</string>
+    <string name="nav_files">Files</string>
+    <string name="files_all">All folders</string>
+    <string name="files_starred">Starred</string>
+    <string name="files_folders">Folders</string>
+    <string name="files_star">Star folder</string>
+    <string name="files_unstar">Unstar folder</string>
+    <string name="files_empty">No files here.</string>
+    <string name="files_up">Up one level</string>
+    <string name="metadata_instant">Saved immediately</string>
+    <string name="action_like">Like</string>
+    <string name="action_dislike">Dislike</string>
+    <string name="ratings_most_liked">Most liked</string>
+    <string name="ratings_most_disliked">Most disliked</string>
+    <string name="ratings_none">Nothing rated yet.</string>
+    <string name="ratings_select">Select</string>
+    <string name="ratings_select_all">Select all</string>
+    <string name="ratings_reset">Reset score</string>
+    <string name="ratings_delete">Delete files</string>
+    <string name="ratings_delete_confirm">Delete %d files from the device? This cannot be undone.</string>
+    <string name="action_go_to_folder">Go to folder</string>
+    <string name="action_go_to_album">Go to album</string>
+    <string name="action_go_to_artist">Go to artist</string>
+    <string name="nav_albums">Albums</string>
+    <string name="nav_artists">Artists</string>
+    <string name="collections_empty">Nothing here yet.</string>
+    <string name="album_unknown">Unknown album</string>
+    <string name="action_edit_album">Edit album</string>
+    <string name="action_edit_artist">Edit artist</string>
+    <string name="action_change_image">Change image</string>
+    <string name="album_image_hint">Stored as cover.jpg in the album folder.</string>
+    <string name="artist_image_hint">Stored inside this app.</string>
+    <string name="rating_liked">Liked</string>
+    <string name="rating_neutral">Neutral</string>
+    <string name="rating_disliked">Disliked</string>
+    <string name="image_pick_failed">Couldn\'t save that image.</string>
+    <string name="nav_search">Search</string>
+    <string name="search_hint">Songs, albums or artists</string>
+    <string name="search_all">All</string>
+    <string name="search_no_results">Nothing matches “%1$s”.</string>
+
+    <!-- Redesign: dashboard, sorting and search extras -->
+    <string name="continue_listening">Continue listening</string>
+    <string name="sort_by">Sort</string>
+    <string name="sort_title">Title</string>
+    <string name="sort_duration">Duration</string>
+    <string name="search_recent">Recent searches</string>
+    <string name="search_clear_recent">Clear</string>
+
+    <string name="action_tags">Tags</string>
+    <string name="search_empty_title">Search your library</string>
+    <string name="search_empty_body">Type an artist, an album or a song. Results appear as you type.</string>
+    <string name="search_try_another">Try another word, or check the spelling.</string>
+    <string name="playlists_empty_body">Create a playlist to group songs the way you listen.</string>
+    <string name="search_results">Results</string>
+    <string name="tags_empty_hint">Tag a song from its ⋮ menu and the tag appears here, ready to play.</string>
+    <string name="recently_added">Recently added</string>
+    <string name="settings_sync_files">Update audio files</string>
+    <string name="settings_sync_files_desc">Write ratings, favourites and tags into each file’s metadata when they change</string>
+    <string name="rating_score">Score</string>
+    <string name="metadata_choose_existing">Choose existing</string>
+    <string name="metadata_no_matches">No existing match</string>
+
+    <string name="metadata_audio_file">Audio file</string>
+    <string name="metadata_section_file">File</string>
+    <string name="metadata_section_details">Details</string>
+    <string name="metadata_lossy">Lossy</string>
+    <string name="metadata_lossless">Lossless</string>
+    <string name="metadata_kbps">%1$d kbps</string>
+    <string name="metadata_codec_unknown">Audio</string>
+
+    <!-- Compress audio -->
+    <string name="action_compress">Compress audio</string>
+    <string name="compress_kicker">Storage</string>
+    <string name="compress_title">Compress audio</string>
+    <string name="compress_batch_title">Compress %1$d songs</string>
+    <string name="compress_target">Target bitrate</string>
+    <string name="compress_kbps_unit">kbps</string>
+    <string name="compress_estimate">≈ %1$s</string>
+    <string name="compress_saves">Saves %1$s (%2$d%%)</string>
+    <string name="compress_lossy_warning">This file is already compressed. Re-encoding adds generation loss, so it will not sound as good as an original AAC at the same bitrate.</string>
+    <string name="compress_lossless_hint">Lossless source: a large space saving for very little audible difference.</string>
+    <string name="compress_keep_original">Keep original file</string>
+    <string name="compress_keep_original_hint">The original is removed only after the new file passes verification. With this on, both files stay and no space is freed.</string>
+    <string name="compress_start">Compress</string>
+    <string name="compress_start_batch">Compress %1$d songs</string>
+    <string name="compress_cancel">Cancel</string>
+    <string name="compress_cancel_job">Stop</string>
+    <string name="compress_running">Converting…</string>
+    <string name="compress_progress">%1$d%% · %2$s</string>
+    <string name="compress_progress_batch">%1$d of %2$d · %3$s</string>
+    <string name="compress_done_title">Conversion finished</string>
+    <string name="compress_done_freed">Freed %1$s</string>
+    <string name="compress_done_cancelled">Stopped early · %1$s freed</string>
+    <string name="compress_done_kept_note">The original was kept, so no space was freed.</string>
+    <string name="compress_done_failures">%1$d could not be converted.</string>
+    <string name="compress_done_replaced_note">The original was removed.</string>
+    <string name="compress_done_button">Done</string>
+    <string name="compress_error_unsupported">This audio format can\'t be decoded on this device.</string>
+    <string name="compress_error_encoder">The audio encoder failed on this file.</string>
+    <string name="compress_error_read_only">This folder is read-only. Remove it in Settings and add it again with write access.</string>
+    <string name="compress_error_no_space">Not enough free space to convert this file.</string>
+    <string name="compress_error_verification">The new file failed verification, so the original was left untouched.</string>
+    <string name="compress_error_no_savings">At this bitrate the file would not get smaller. Pick a lower bitrate.</string>
+    <string name="compress_error_io">The file couldn\'t be read or written.</string>
+    <string name="compress_already_small">This file is already small at these bitrates.</string>
+
+    <!-- Storage -->
+    <string name="settings_storage">Storage</string>
+    <string name="settings_free_space">Free up space</string>
+    <string name="settings_free_space_desc">Convert large tracks to AAC and reclaim storage</string>
+    <string name="free_space_title">Free up space</string>
+    <string name="free_space_hint">Pick tracks to convert to AAC. The original is removed only after the new file passes verification.</string>
+    <string name="free_space_selected">%1$d selected</string>
+    <string name="free_space_none">Select tracks to compress</string>
+    <string name="free_space_select_all">Select all</string>
+    <string name="free_space_clear">Clear</string>
+    <string name="free_space_start">Compress</string>
+    <string name="free_space_empty_title">Nothing to compress</string>
+    <string name="free_space_empty_body">No tracks are large enough to shrink at these bitrates. If this folder hides file sizes, add it again with full access.</string>
+
+    <plurals name="compress_skipped_note">
+        <item quantity="one">%d track can\'t get smaller at this bitrate and will be skipped.</item>
+        <item quantity="other">%d tracks can\'t get smaller at this bitrate and will be skipped.</item>
+    </plurals>
+    <plurals name="compress_done_skipped">
+        <item quantity="one">%d skipped (already small).</item>
+        <item quantity="other">%d skipped (already small).</item>
+    </plurals>
+<string name="compress_done_cancelled_zero">Stopped before finishing.</string>
+    <string name="compress_done_kept_copy">The compressed copy was saved next to the original.</string>
+
+    <!-- App icon -->
+    <string name="settings_app_icon">App icon</string>
+    <string name="settings_app_icon_hint">Choose the icon shown on your home screen. Changing it may close the app.</string>
+    <string name="app_icon_change_title">Change app icon?</string>
+    <string name="app_icon_change_body">The app may close while the icon changes. If it does, reopen it from your home screen.</string>
+    <string name="app_icon_change_confirm">Change</string>
+    <string name="app_icon_equalizer">Equalizer</string>
+    <string name="app_icon_vinyl">Vinyl</string>
+    <string name="app_icon_note">Note</string>
+    <string name="app_icon_wave">Wave</string>
+    <string name="app_icon_headphones">Headphones</string>
+</resources>

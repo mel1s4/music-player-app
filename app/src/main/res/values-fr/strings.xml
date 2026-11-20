@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Lecteur de musique</string>
+    <string name="nav_dashboard">Accueil</string>
+    <string name="nav_songs">Morceaux</string>
+    <string name="nav_settings">Réglages</string>
+    <string name="menu_open">Ouvrir le menu</string>
+    <string name="drawer_subtitle">Bibliothèque locale</string>
+
+    <string name="dashboard_library">Votre bibliothèque</string>
+    <string name="dashboard_nothing_scanned">Rien n\'a encore été analysé.</string>
+    <plurals name="song_count">
+        <item quantity="one">%d morceau</item>
+        <item quantity="other">%d morceaux</item>
+    </plurals>
+    <string name="stat_songs">Morceaux</string>
+    <string name="stat_albums">Albums</string>
+    <string name="stat_hours">Heures</string>
+    <string name="recently_played">Écoutés récemment</string>
+    <string name="recently_played_empty">Rien pour l\'instant — lancez un morceau et il apparaîtra ici.</string>
+
+    <string name="songs_empty_title">Aucun morceau</string>
+    <string name="songs_empty_body">Aucun fichier audio trouvé dans les dossiers ajoutés.</string>
+
+    <string name="settings_appearance">Apparence</string>
+    <string name="settings_theme">Thème</string>
+    <string name="theme_light">Clair</string>
+    <string name="theme_dark">Sombre</string>
+    <string name="settings_language">Langue</string>
+    <string name="settings_holding_hand">Main dominante</string>
+    <string name="settings_holding_hand_hint">Place les commandes du côté où vous tenez le téléphone.</string>
+    <string name="hand_left">Gauche</string>
+    <string name="hand_right">Droite</string>
+
+    <!-- Libraries -->
+    <string name="settings_libraries">Bibliothèques</string>
+    <string name="libraries_hint">Android ne donne accès qu\'aux dossiers que vous choisissez ici.</string>
+    <string name="libraries_empty">Aucun dossier ajouté pour l\'instant.</string>
+    <string name="libraries_add">Ajouter un dossier</string>
+    <string name="libraries_remove">Retirer le dossier</string>
+
+    <string name="settings_playback">Lecture</string>
+    <string name="settings_scan_on_launch">Analyser au démarrage</string>
+    <string name="settings_scan_on_launch_desc">Indexe votre musique à l\'ouverture</string>
+    <string name="settings_album_art">Afficher les pochettes</string>
+    <string name="settings_album_art_desc">Charge les pochettes de votre bibliothèque</string>
+
+    <string name="settings_about">À propos</string>
+    <string name="about_version">Version</string>
+    <string name="about_package">Paquet</string>
+    <string name="about_min_android">Android minimum</string>
+    <string name="min_android_value">Android 8.0 (API 26)</string>
+    <string name="songs_no_library_title">Aucune bibliothèque</string>
+    <string name="songs_no_library_body">Ajoutez un dossier dans Réglages pour commencer.</string>
+    <string name="songs_scanning">Analyse de vos dossiers…</string>
+    <string name="action_play">Lire</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_more">Plus d\'options</string>
+    <string name="now_playing">Lecture en cours</string>
+    <string name="action_close">Fermer</string>
+    <string name="action_shuffle">Aléatoire</string>
+    <string name="action_previous">Précédent</string>
+    <string name="action_next">Suivant</string>
+    <string name="action_love">Favori</string>
+    <string name="action_add_to_playlist">Ajouter à une playlist</string>
+    <string name="action_manage_tags">Gérer les étiquettes</string>
+    <string name="playlists">Playlists</string>
+    <string name="playlists_empty">Aucune playlist pour l\'instant.</string>
+    <string name="playlist_new">Nouvelle playlist</string>
+    <string name="playlist_name">Nom de la playlist</string>
+    <string name="action_create">Créer</string>
+    <string name="action_cancel">Annuler</string>
+    <string name="tags_title">Étiquettes</string>
+    <string name="tags_empty">Aucune étiquette.</string>
+    <string name="tags_hint">Ajouter une étiquette</string>
+    <string name="action_add">Ajouter</string>
+    <string name="tags_note">Les étiquettes sont conservées dans la bibliothèque et copiées dans les métadonnées du fichier lorsque le format le permet.</string>
+    <string name="action_done">Terminé</string>
+    <string name="no_artist">Artiste inconnu</string>
+    <string name="nav_playlists">Playlists</string>
+    <string name="playlist_dynamic">Dynamique</string>
+    <string name="playlist_filter_tag">Filtrer par étiquette (facultatif)</string>
+    <string name="playlist_filter_hint">Laissez vide pour une playlist manuelle</string>
+    <string name="playlist_edit_title">Modifier la playlist</string>
+    <string name="playlist_delete">Supprimer la playlist</string>
+    <string name="playlist_delete_confirm">Supprimer « %1$s » ? Action irréversible.</string>
+    <string name="playlist_remove_track">Retirer de la playlist</string>
+    <string name="playlist_empty">Cette playlist est vide.</string>
+    <string name="playlist_dynamic_empty">Aucun morceau ne porte cette étiquette.</string>
+    <string name="action_edit">Modifier</string>
+    <string name="action_delete">Supprimer</string>
+    <string name="action_back">Retour</string>
+    <string name="action_save">Enregistrer</string>
+    <string name="nav_menu">Menu</string>
+    <string name="action_edit_song">Modifier le morceau</string>
+    <string name="edit_metadata_title">Métadonnées</string>
+    <string name="field_title">Titre</string>
+    <string name="field_artist">Artiste</string>
+    <string name="field_album">Album</string>
+    <string name="field_album_artist">Artiste de l\'album</string>
+    <string name="field_year">Année</string>
+    <string name="field_track">Piste</string>
+    <string name="field_disc">Disque</string>
+    <string name="field_genre">Genre</string>
+    <string name="field_comment">Commentaire</string>
+    <string name="metadata_reading">Lecture des étiquettes…</string>
+    <string name="metadata_saving">Enregistrement…</string>
+    <string name="metadata_write_failed">Impossible d\'écrire les étiquettes dans ce fichier.</string>
+    <string name="metadata_no_write_permission">Ce dossier a été ajouté en lecture seule. Retirez-le dans Réglages et ajoutez-le à nouveau pour autoriser la modification.</string>
+    <string name="playlist_play_all">Tout lire</string>
+    <string name="field_file_name">Nom du fichier</string>
+    <string name="field_folder">Dossier</string>
+    <string name="metadata_rename_failed">Impossible de renommer le fichier.</string>
+    <string name="nav_files">Fichiers</string>
+    <string name="files_all">Tous les dossiers</string>
+    <string name="files_starred">Favoris</string>
+    <string name="files_folders">Dossiers</string>
+    <string name="files_star">Ajouter aux favoris</string>
+    <string name="files_unstar">Retirer des favoris</string>
+    <string name="files_empty">Aucun fichier ici.</string>
+    <string name="files_up">Remonter d\'un niveau</string>
+    <string name="metadata_instant">Enregistré immédiatement</string>
+    <string name="action_like">J\'aime</string>
+    <string name="action_dislike">Je n\'aime pas</string>
+    <string name="ratings_most_liked">Les plus aimés</string>
+    <string name="ratings_most_disliked">Les moins aimés</string>
+    <string name="ratings_none">Rien de noté pour l\'instant.</string>
+    <string name="ratings_select">Sélectionner</string>
+    <string name="ratings_select_all">Tout sélectionner</string>
+    <string name="ratings_reset">Réinitialiser le score</string>
+    <string name="ratings_delete">Supprimer les fichiers</string>
+    <string name="ratings_delete_confirm">Supprimer %d fichiers de l\'appareil ? Action irréversible.</string>
+    <string name="action_go_to_folder">Aller au dossier</string>
+    <string name="action_go_to_album">Aller à l\'album</string>
+    <string name="action_go_to_artist">Aller à l\'artiste</string>
+    <string name="nav_albums">Albums</string>
+    <string name="nav_artists">Artistes</string>
+    <string name="collections_empty">Rien ici pour l\'instant.</string>
+    <string name="album_unknown">Album inconnu</string>
+    <string name="action_edit_album">Modifier l\'album</string>
+    <string name="action_edit_artist">Modifier l\'artiste</string>
+    <string name="action_change_image">Changer l\'image</string>
+    <string name="album_image_hint">Enregistré comme cover.jpg dans le dossier de l\'album.</string>
+    <string name="artist_image_hint">Enregistré dans cette application.</string>
+    <string name="rating_liked">Aimé</string>
+    <string name="rating_neutral">Neutre</string>
+    <string name="rating_disliked">Pas aimé</string>
+    <string name="image_pick_failed">Impossible d\'enregistrer cette image.</string>
+    <string name="nav_search">Rechercher</string>
+    <string name="search_hint">Morceaux, albums ou artistes</string>
+    <string name="search_all">Tout</string>
+    <string name="search_no_results">Rien ne correspond à « %1$s ».</string>
+
+    <!-- Redesign: dashboard, sorting and search extras -->
+    <string name="continue_listening">Reprendre l\'écoute</string>
+    <string name="sort_by">Trier</string>
+    <string name="sort_title">Titre</string>
+    <string name="sort_duration">Durée</string>
+    <string name="search_recent">Recherches récentes</string>
+    <string name="search_clear_recent">Effacer</string>
+
+    <string name="action_tags">Étiquettes</string>
+    <string name="search_empty_title">Recherchez dans votre bibliothèque</string>
+    <string name="search_empty_body">Saisissez un artiste, un album ou un titre. Les résultats apparaissent au fil de la frappe.</string>
+    <string name="search_try_another">Essayez un autre mot ou vérifiez l\'orthographe.</string>
+    <string name="playlists_empty_body">Créez une liste pour regrouper vos titres comme vous les écoutez.</string>
+    <string name="search_results">Résultats</string>
+    <string name="tags_empty_hint">Ajoutez une étiquette depuis le menu ⋮ d\'un titre : elle apparaîtra ici, prête à être lue.</string>
+    <string name="recently_added">Ajouté récemment</string>
+    <string name="settings_sync_files">Mettre à jour les fichiers audio</string>
+    <string name="settings_sync_files_desc">Écrit les notes, favoris et étiquettes dans les métadonnées du fichier lorsqu’ils changent</string>
+    <string name="rating_score">Score</string>
+    <string name="metadata_choose_existing">Choisir existant</string>
+    <string name="metadata_no_matches">Aucune correspondance</string>
+
+    <string name="metadata_audio_file">Fichier audio</string>
+    <string name="metadata_section_file">Fichier</string>
+    <string name="metadata_section_details">Détails</string>
+    <string name="metadata_lossy">Avec perte</string>
+    <string name="metadata_lossless">Sans perte</string>
+    <string name="metadata_kbps">%1$d kbps</string>
+    <string name="metadata_codec_unknown">Audio</string>
+
+    <!-- Compresser l’audio -->
+    <string name="action_compress">Compresser l’audio</string>
+    <string name="compress_kicker">Stockage</string>
+    <string name="compress_title">Compresser l’audio</string>
+    <string name="compress_batch_title">Compresser %1$d titres</string>
+    <string name="compress_target">Débit cible</string>
+    <string name="compress_kbps_unit">kbps</string>
+    <string name="compress_estimate">≈ %1$s</string>
+    <string name="compress_saves">Économie : %1$s (%2$d%%)</string>
+    <string name="compress_lossy_warning">Ce fichier est déjà compressé. Le réencodage ajoute une perte générationnelle : le son sera moins bon qu’un AAC d’origine au même débit.</string>
+    <string name="compress_lossless_hint">Source sans perte : beaucoup d’espace gagné pour une différence à peine audible.</string>
+    <string name="compress_keep_original">Garder le fichier d’origine</string>
+    <string name="compress_keep_original_hint">L’original n’est supprimé qu’une fois le nouveau fichier vérifié. Activé, les deux restent et aucun espace n’est libéré.</string>
+    <string name="compress_start">Compresser</string>
+    <string name="compress_start_batch">Compresser %1$d titres</string>
+    <string name="compress_cancel">Annuler</string>
+    <string name="compress_cancel_job">Arrêter</string>
+    <string name="compress_running">Conversion…</string>
+    <string name="compress_progress">%1$d%% · %2$s</string>
+    <string name="compress_progress_batch">%1$d sur %2$d · %3$s</string>
+    <string name="compress_done_title">Conversion terminée</string>
+    <string name="compress_done_freed">%1$s libérés</string>
+    <string name="compress_done_cancelled">Arrêté · %1$s libérés</string>
+    <string name="compress_done_kept_note">L’original a été conservé, donc aucun espace n’a été libéré.</string>
+    <string name="compress_done_failures">%1$d n’ont pas pu être convertis.</string>
+    <string name="compress_done_replaced_note">L’original a été supprimé.</string>
+    <string name="compress_done_button">Terminé</string>
+    <string name="compress_error_unsupported">Ce format audio ne peut pas être décodé sur cet appareil.</string>
+    <string name="compress_error_encoder">L’encodeur audio a échoué sur ce fichier.</string>
+    <string name="compress_error_read_only">Ce dossier est en lecture seule. Retirez-le dans les Réglages et ajoutez-le à nouveau avec l’accès en écriture.</string>
+    <string name="compress_error_no_space">Pas assez d’espace libre pour convertir ce fichier.</string>
+    <string name="compress_error_verification">Le nouveau fichier n’a pas passé la vérification, l’original est donc resté intact.</string>
+    <string name="compress_error_no_savings">À ce débit, le fichier ne serait pas plus petit. Choisissez un débit plus bas.</string>
+    <string name="compress_error_io">Le fichier n’a pas pu être lu ou écrit.</string>
+    <string name="compress_already_small">Ce fichier est déjà petit à ces débits.</string>
+
+    <!-- Stockage -->
+    <string name="settings_storage">Stockage</string>
+    <string name="settings_free_space">Libérer de l’espace</string>
+    <string name="settings_free_space_desc">Convertissez les gros titres en AAC et récupérez de l’espace</string>
+    <string name="free_space_title">Libérer de l’espace</string>
+    <string name="free_space_hint">Choisissez des titres à convertir en AAC. L’original n’est supprimé qu’après vérification du nouveau fichier.</string>
+    <string name="free_space_selected">%1$d sélectionnés</string>
+    <string name="free_space_none">Sélectionnez des titres à compresser</string>
+    <string name="free_space_select_all">Tout sélectionner</string>
+    <string name="free_space_clear">Effacer</string>
+    <string name="free_space_start">Compresser</string>
+    <string name="free_space_empty_title">Rien à compresser</string>
+    <string name="free_space_empty_body">Aucun titre n’est assez gros pour être réduit à ces débits. Si ce dossier masque les tailles, ajoutez-le à nouveau avec un accès complet.</string>
+
+    <plurals name="compress_skipped_note">
+        <item quantity="one">%d titre ne peut pas être réduit à ce débit et sera ignoré.</item>
+        <item quantity="other">%d titres ne peuvent pas être réduits à ce débit et seront ignorés.</item>
+    </plurals>
+    <plurals name="compress_done_skipped">
+        <item quantity="one">%d ignoré (déjà petit).</item>
+        <item quantity="other">%d ignorés (déjà petits).</item>
+    </plurals>
+<string name="compress_done_cancelled_zero">Arrêté avant la fin.</string>
+    <string name="compress_done_kept_copy">La copie compressée a été enregistrée à côté de l’original.</string>
+
+    <!-- Icône de l’application -->
+    <string name="settings_app_icon">Icône de l’application</string>
+    <string name="settings_app_icon_hint">Choisissez l’icône affichée sur l’écran d’accueil. La changer peut fermer l’application.</string>
+    <string name="app_icon_change_title">Changer l’icône ?</string>
+    <string name="app_icon_change_body">L’application peut se fermer pendant le changement d’icône. Si cela arrive, rouvrez-la depuis l’écran d’accueil.</string>
+    <string name="app_icon_change_confirm">Changer</string>
+    <string name="app_icon_equalizer">Égaliseur</string>
+    <string name="app_icon_vinyl">Vinyle</string>
+    <string name="app_icon_note">Note</string>
+    <string name="app_icon_wave">Onde</string>
+    <string name="app_icon_headphones">Casque</string>
+</resources>

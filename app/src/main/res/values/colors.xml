@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="icon_bg_eq">#0B1411</color>
+    <color name="icon_bg_vinyl">#07130D</color>
+    <color name="icon_bg_note">#101A0B</color>
+    <color name="icon_bg_wave">#071017</color>
+    <color name="icon_bg_phones">#160B10</color>
+</resources>

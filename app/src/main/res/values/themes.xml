@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose draws the UI, but AppCompatActivity requires an AppCompat parent theme.
+         The window background is what you see for the first frame before Compose draws. -->
+    <style name="Theme.MusicPlayer" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowBackground">#0E1116</item>
+    </style>
+</resources>
