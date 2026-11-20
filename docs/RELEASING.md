@@ -34,12 +34,32 @@ release build too before publishing.
 
 ## 3. Sign
 
-The repository does not contain a signing key. Build a signed APK/AAB locally in Android
-Studio (**Build → Generate Signed App Bundle / APK**) or with a local, git-ignored
-`keystore.properties`. Never commit the keystore or its passwords.
+The repository does not contain a signing key. The build reads an optional, git-ignored
+`keystore.properties` in the project root:
 
-Keep the signing key backed up: Android will not accept an update signed with a different
-key.
+```properties
+storeFile=/absolute/path/to/release.jks
+keyAlias=music-player
+storePasswordFile=/absolute/path/to/password.txt
+keyPasswordFile=/absolute/path/to/password.txt
+```
+
+`storePassword` / `keyPassword` can be used instead of the `*File` variant, and relative
+paths are resolved from the project root. If the file or any value is missing, the
+release build is left unsigned, which is what CI does.
+
+Generate a key once:
+
+```bash
+keytool -genkeypair -v \
+  -keystore release.jks -storetype PKCS12 \
+  -alias music-player -keyalg RSA -keysize 4096 -validity 10000
+```
+
+Never commit the keystore, the password file or `keystore.properties`. Keep at least two
+offline backups: Android will not accept an update signed with a different key. The
+release APK is written to `app/build/outputs/apk/release/app-release.apk`; verify it with
+`apksigner verify --print-certs` before attaching it to a release.
 
 ## 4. Publish
 

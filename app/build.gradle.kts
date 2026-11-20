@@ -1,8 +1,35 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // Kotlin itself comes from AGP. Compose still needs its compiler plugin.
     id("org.jetbrains.kotlin.plugin.compose")
 }
+
+// Release signing is optional and local-only. `keystore.properties` is git-ignored;
+// the keystore and its password live outside the repository. Without the file the
+// release build remains unsigned, which is what CI uses.
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.isFile) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
+}
+
+fun localSecret(valueKey: String, fileKey: String): String? =
+    keystoreProperties.getProperty(valueKey)
+        ?: keystoreProperties.getProperty(fileKey)
+            ?.let { rootProject.file(it) }
+            ?.takeIf { it.isFile }
+            ?.readText()
+            ?.trim()
+
+val releaseStoreFile = keystoreProperties.getProperty("storeFile")
+    ?.let { rootProject.file(it) }
+    ?.takeIf { it.isFile }
+val releaseStorePassword = localSecret("storePassword", "storePasswordFile")
+val releaseKeyAlias = keystoreProperties.getProperty("keyAlias")?.trim()?.takeIf { it.isNotEmpty() }
+val releaseKeyPassword = localSecret("keyPassword", "keyPasswordFile")
 
 android {
     namespace = "dev.melisa.musicplayer"
@@ -21,6 +48,22 @@ android {
         buildConfig = true
     }
 
+    val releaseSigning = if (
+        releaseStoreFile != null &&
+        releaseStorePassword != null &&
+        releaseKeyAlias != null &&
+        releaseKeyPassword != null
+    ) {
+        signingConfigs.create("release") {
+            storeFile = releaseStoreFile
+            storePassword = releaseStorePassword
+            keyAlias = releaseKeyAlias
+            keyPassword = releaseKeyPassword
+        }
+    } else {
+        null
+    }
+
     buildTypes {
         release {
             // R8 + resource shrinking are the difference between a 25 MB debug APK and
@@ -31,6 +74,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            releaseSigning?.let { signingConfig = it }
         }
     }
 }
