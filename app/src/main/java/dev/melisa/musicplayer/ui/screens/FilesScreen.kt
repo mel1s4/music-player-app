@@ -76,6 +76,7 @@ fun FilesScreen(
     onCompress: (Track) -> Unit,
     onLike: (Track) -> Unit,
     onDislike: (Track) -> Unit,
+    onDelete: (Track) -> Unit,
     path: String,
     onPathChange: (String) -> Unit,
 ) {
@@ -182,6 +183,7 @@ fun FilesScreen(
                                 onCompress = { onCompress(track) },
                                 onLike = { onLike(track) },
                                 onDislike = { onDislike(track) },
+                                onDelete = { onDelete(track) },
                             )
                         }
                     }

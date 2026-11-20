@@ -90,6 +90,9 @@
     <string name="playlist_dynamic_empty">Nenhuma música tem esta etiqueta ainda.</string>
     <string name="action_edit">Editar</string>
     <string name="action_delete">Excluir</string>
+    <string name="action_delete_file">Excluir arquivo</string>
+    <string name="delete_song_confirm">Excluir “%1$s” do dispositivo? O arquivo de áudio será apagado e isso não pode ser desfeito.</string>
+    <string name="delete_song_failed">Não foi possível excluir o arquivo. Ele pode ser somente leitura ou já não existir.</string>
     <string name="action_back">Voltar</string>
     <string name="action_save">Salvar</string>
     <string name="nav_menu">Menu</string>
@@ -171,6 +174,8 @@
     <string name="recently_added">Adicionado recentemente</string>
     <string name="settings_sync_files">Atualizar arquivos de áudio</string>
     <string name="settings_sync_files_desc">Grava avaliações, favoritos e etiquetas nos metadados do arquivo quando mudam</string>
+    <string name="settings_notifications">Notificações de reprodução</string>
+    <string name="settings_notifications_desc">Mostre a música atual na tela de bloqueio e nas notificações</string>
     <string name="rating_score">Pontuação</string>
     <string name="metadata_choose_existing">Escolher existente</string>
     <string name="metadata_no_matches">Nenhuma correspondência</string>
@@ -218,6 +223,31 @@
     <string name="compress_error_no_savings">Nesta taxa o arquivo não ficaria menor. Escolha uma taxa mais baixa.</string>
     <string name="compress_error_io">Não foi possível ler ou gravar o arquivo.</string>
     <string name="compress_already_small">Este arquivo já é pequeno nestas taxas.</string>
+    <!-- Ouvir a diferença: comparador de taxas -->
+    <string name="hear_difference">Ouvir a diferença</string>
+    <string name="hear_difference_hint">Compare como esta música soa em diferentes taxas de bits antes de substituir o arquivo.</string>
+    <string name="hear_scope">O que ouvir</string>
+    <string name="hear_scope_clip">Trecho de 20 segundos</string>
+    <string name="hear_scope_full">Música completa</string>
+    <string name="hear_scope_clip_hint">De %1$s a %2$s</string>
+    <string name="hear_bitrates">Taxas para comparar</string>
+    <string name="hear_bitrates_hint">Selecione uma ou mais. Cada uma vira uma versão para ouvir.</string>
+    <string name="hear_bitrate_label">%1$d kbps</string>
+    <string name="hear_start">Iniciar comparação</string>
+    <string name="hear_converting">Convertendo %1$d kbps…</string>
+    <string name="hear_results">Toque em reproduzir em cada versão e escolha a que quer manter.</string>
+    <string name="hear_original">Original</string>
+    <string name="hear_keep">Manter esta versão</string>
+    <string name="hear_keep_bitrate">Salvar a %1$d kbps</string>
+    <string name="hear_saving">Salvando a música completa a %1$d kbps…</string>
+    <string name="hear_saved">Salva a %1$d kbps</string>
+    <string name="hear_saved_hint">O arquivo original foi substituído e a biblioteca agora aponta para esta versão.</string>
+    <string name="hear_saved_copy_hint">A nova versão foi salva ao lado do original, que não pôde ser excluído.</string>
+    <string name="hear_change">Alterar seleção</string>
+    <string name="hear_no_bitrates">Este arquivo já é pequeno. Nenhuma taxa menor economizaria espaço.</string>
+    <string name="hear_clip_note">Os trechos vêm do meio da música. A versão mantida é salva como música completa.</string>
+    <string name="hear_full_note">Cada taxa selecionada é convertida por inteiro, então pode demorar.</string>
+    <string name="hear_preview_failed">A prévia de %1$d kbps falhou:</string>
 
     <!-- Armazenamento -->
     <string name="settings_storage">Armazenamento</string>

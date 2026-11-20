@@ -20,7 +20,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -88,7 +87,6 @@ fun DashboardScreen(
     onPlay: (Track) -> Unit,
     onRescan: () -> Unit,
     onFreeSpace: () -> Unit,
-    onOpenPlayer: () -> Unit,
     onOpenSettings: () -> Unit,
     onFilesDeleted: () -> Unit,
 ) {
@@ -169,17 +167,6 @@ fun DashboardScreen(
                             }
                         }
                     }
-                }
-            }
-
-            val playing = nowPlaying
-            if (playing != null) {
-                item {
-                    ContinueCard(
-                        track = playing,
-                        isPlaying = isPlaying,
-                        onClick = onOpenPlayer,
-                    )
                 }
             }
 
@@ -454,70 +441,6 @@ private fun formatLibrarySize(bytes: Long, albums: Int): String {
         mb >= 1024.0 -> "%.1f GB".format(mb / 1024.0)
         mb >= 100.0 -> "%.0f MB".format(mb)
         else -> "%.1f MB".format(mb)
-    }
-}
-
-/** "Pick up where you left off" — opens the full player. */
-@Composable
-private fun ContinueCard(
-    track: Track,
-    isPlaying: Boolean,
-    onClick: () -> Unit,
-) {
-    NeonPanel(
-        container = if (isPlaying) {
-            MaterialTheme.colorScheme.surfaceContainerHighest
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHigh
-        },
-        corner = 20.dp,
-        modifier = Modifier
-            .fillMaxWidth()
-            .cyberClick(pressedScale = 0.98f, onClick = onClick),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            SongCover(track = track, side = 54.dp, playing = isPlaying)
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 12.dp),
-            ) {
-                SectionKicker(
-                    text = stringResource(R.string.continue_listening),
-                    accent = if (isPlaying) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = track.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = track.artist?.takeIf { it.isNotBlank() }
-                        ?: stringResource(R.string.no_artist),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            if (isPlaying) {
-                EqualizerBars(playing = true, color = MaterialTheme.colorScheme.primary, height = 16.dp)
-                Spacer(Modifier.width(8.dp))
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
     }
 }
 

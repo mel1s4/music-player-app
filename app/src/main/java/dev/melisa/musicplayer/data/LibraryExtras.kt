@@ -129,6 +129,44 @@ class LibraryExtras(context: Context) {
     }
 
     /**
+     * Drops every app-side trace of a file that has been deleted from the device.
+     * Ratings, favourites, tags, first-seen stamps and playlist memberships all point
+     * at a URI that can never resolve again, so they are removed now instead of being
+     * left for the UI to filter out on every read.
+     */
+    fun forget(uri: String) {
+        if (favorites.contains(uri)) {
+            favorites = favorites - uri
+            store.setFavorite(uri, false)
+        }
+        tags[uri]?.let { ownedTags ->
+            tags = tags - uri
+            ownedTags.forEach { tag -> store.removeTag(uri, tag) }
+        }
+        if (ratings.containsKey(uri)) {
+            ratings = ratings - uri
+            store.deleteRating(uri)
+        }
+        if (addedAt.containsKey(uri)) {
+            addedAt = addedAt - uri
+            store.deleteAdded(uri)
+        }
+        val affected = playlists.filter { it.trackUris.contains(uri) }
+        if (affected.isNotEmpty()) {
+            playlists = playlists.map { playlist ->
+                if (playlist.trackUris.contains(uri)) {
+                    playlist.copy(trackUris = playlist.trackUris - uri)
+                } else {
+                    playlist
+                }
+            }
+            affected.forEach { playlist ->
+                store.setPlaylistTracks(playlist.id, playlist.trackUris - uri)
+            }
+        }
+    }
+
+    /**
      * A playlist with a non-blank [tagRule] is dynamic: it stores the rule, not the tracks.
      */
     fun createPlaylist(name: String, tagRule: String? = null): Playlist {

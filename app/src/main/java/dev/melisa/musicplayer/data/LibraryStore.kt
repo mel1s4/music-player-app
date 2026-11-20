@@ -298,6 +298,11 @@ class LibraryStore(context: Context) : TrackMetaCache {
         }
     }
 
+    /** Forgets the first-seen stamp of a file that no longer exists. */
+    fun deleteAdded(uri: String) {
+        db.delete("tracks", "uri = ?", arrayOf(uri))
+    }
+
     // ------------------------------------------------------------- playlists
 
     fun insertPlaylist(playlist: Playlist) {

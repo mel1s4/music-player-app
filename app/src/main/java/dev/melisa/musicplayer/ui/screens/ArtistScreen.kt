@@ -72,6 +72,7 @@ fun ArtistScreen(
     onCompress: (Track) -> Unit,
     onLike: (Track) -> Unit,
     onDislike: (Track) -> Unit,
+    onDelete: (Track) -> Unit,
     onEdit: () -> Unit,
 ) {
     val sections = remember(tracks) {
@@ -212,6 +213,7 @@ fun ArtistScreen(
                             onCompress = { onCompress(track) },
                             onLike = { onLike(track) },
                             onDislike = { onDislike(track) },
+                            onDelete = { onDelete(track) },
                         )
                     }
                 }

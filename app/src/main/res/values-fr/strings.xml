@@ -90,6 +90,9 @@
     <string name="playlist_dynamic_empty">Aucun morceau ne porte cette étiquette.</string>
     <string name="action_edit">Modifier</string>
     <string name="action_delete">Supprimer</string>
+    <string name="action_delete_file">Supprimer le fichier</string>
+    <string name="delete_song_confirm">Supprimer « %1$s » de l\'appareil ? Le fichier audio sera effacé et cette action est irréversible.</string>
+    <string name="delete_song_failed">Impossible de supprimer ce fichier. Il est peut-être en lecture seule ou déjà absent.</string>
     <string name="action_back">Retour</string>
     <string name="action_save">Enregistrer</string>
     <string name="nav_menu">Menu</string>
@@ -171,6 +174,8 @@
     <string name="recently_added">Ajouté récemment</string>
     <string name="settings_sync_files">Mettre à jour les fichiers audio</string>
     <string name="settings_sync_files_desc">Écrit les notes, favoris et étiquettes dans les métadonnées du fichier lorsqu’ils changent</string>
+    <string name="settings_notifications">Notifications de lecture</string>
+    <string name="settings_notifications_desc">Afficher le morceau en cours sur l’écran verrouillé et dans les notifications</string>
     <string name="rating_score">Score</string>
     <string name="metadata_choose_existing">Choisir existant</string>
     <string name="metadata_no_matches">Aucune correspondance</string>
@@ -218,6 +223,31 @@
     <string name="compress_error_no_savings">À ce débit, le fichier ne serait pas plus petit. Choisissez un débit plus bas.</string>
     <string name="compress_error_io">Le fichier n’a pas pu être lu ou écrit.</string>
     <string name="compress_already_small">Ce fichier est déjà petit à ces débits.</string>
+    <!-- Entendre la différence : comparateur de débits -->
+    <string name="hear_difference">Entendre la différence</string>
+    <string name="hear_difference_hint">Comparez le rendu de ce morceau à différents débits avant de remplacer le fichier.</string>
+    <string name="hear_scope">Quoi écouter</string>
+    <string name="hear_scope_clip">Extrait de 20 secondes</string>
+    <string name="hear_scope_full">Morceau complet</string>
+    <string name="hear_scope_clip_hint">De %1$s à %2$s</string>
+    <string name="hear_bitrates">Débits à comparer</string>
+    <string name="hear_bitrates_hint">Sélectionnez-en un ou plusieurs. Chacun devient une version à écouter.</string>
+    <string name="hear_bitrate_label">%1$d kbps</string>
+    <string name="hear_start">Lancer la comparaison</string>
+    <string name="hear_converting">Conversion à %1$d kbps…</string>
+    <string name="hear_results">Lancez la lecture de chaque version, puis gardez celle qui vous plaît.</string>
+    <string name="hear_original">Original</string>
+    <string name="hear_keep">Garder cette version</string>
+    <string name="hear_keep_bitrate">Enregistrer à %1$d kbps</string>
+    <string name="hear_saving">Enregistrement du morceau complet à %1$d kbps…</string>
+    <string name="hear_saved">Enregistré à %1$d kbps</string>
+    <string name="hear_saved_hint">Le fichier d\'origine a été remplacé et la bibliothèque pointe désormais vers cette version.</string>
+    <string name="hear_saved_copy_hint">La nouvelle version a été enregistrée à côté de l\'original, qui n\'a pas pu être supprimé.</string>
+    <string name="hear_change">Changer la sélection</string>
+    <string name="hear_no_bitrates">Ce fichier est déjà petit. Aucun débit inférieur ne ferait gagner de place.</string>
+    <string name="hear_clip_note">Les extraits viennent du milieu du morceau. La version gardée est enregistrée en morceau complet.</string>
+    <string name="hear_full_note">Chaque débit sélectionné est converti en entier, cela peut prendre du temps.</string>
+    <string name="hear_preview_failed">L\'aperçu à %1$d kbps a échoué :</string>
 
     <!-- Stockage -->
     <string name="settings_storage">Stockage</string>

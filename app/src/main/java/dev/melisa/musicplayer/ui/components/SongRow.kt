@@ -55,6 +55,7 @@ fun SongRow(
     onLike: () -> Unit,
     onDislike: () -> Unit,
     onCompress: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
     isPlaying: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
@@ -149,6 +150,7 @@ fun SongRow(
                 onLike = onLike,
                 onDislike = onDislike,
                 onCompress = onCompress,
+                onDelete = onDelete,
             )
         }
     }

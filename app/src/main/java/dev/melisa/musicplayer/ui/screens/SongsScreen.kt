@@ -94,6 +94,7 @@ fun SongsScreen(
     onCompress: (Track) -> Unit,
     onLike: (Track) -> Unit,
     onDislike: (Track) -> Unit,
+    onDelete: (Track) -> Unit,
     onOpenFiles: () -> Unit,
     onOpenAlbums: () -> Unit,
     onOpenArtists: () -> Unit,
@@ -283,6 +284,7 @@ fun SongsScreen(
                             onCompress = { onCompress(track) },
                             onLike = { onLike(track) },
                             onDislike = { onDislike(track) },
+                            onDelete = { onDelete(track) },
                             modifier = Modifier.animateItem(),
                         )
                     }
@@ -303,6 +305,7 @@ fun SongsScreen(
                                 onCompress = { onCompress(track) },
                                 onLike = { onLike(track) },
                                 onDislike = { onDislike(track) },
+                                onDelete = { onDelete(track) },
                                 modifier = Modifier.animateItem(),
                             )
                         }

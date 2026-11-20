@@ -13,6 +13,41 @@ project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - More tablet and foldable layouts.
 - Additional library statistics and listening history.
 
+## [0.2.0] - 2026-11-20
+
+### Added
+
+- Delete-file action in every song's overflow menu, with a confirmation dialog and
+  cleanup of ratings, tags, favourites, playlist entries and the play queue.
+- Artist and album autocomplete on the edit-song form: matches appear as you type in a
+  scrollable panel, so several existing values are one tap away.
+- **Hear the difference** on the edit-song form: convert a 20-second excerpt or the full
+  song at several bitrates, play the versions back to back, and keep the one that sounds
+  right. The chosen version is saved as the full song.
+- Swipe up on the Now Playing header or artwork to open the song editor.
+- A **Playback notifications** entry in Settings opens the system notification page.
+
+### Changed
+
+- On the edit-song form, artist and title now come before the file name, and **Save** is
+  a sticky bar that stays directly above the keyboard while the form scrolls.
+- Swipe down on the Now Playing header or artwork to hide the player (the header already
+  supported it; the artwork now does too).
+
+### Removed
+
+- The "Continue listening" card from the Dashboard; the mini player already carries the
+  current track and opens the full player.
+
+### Fixed
+
+- Artist suggestions on the edit-song form open while typing and scroll inside the
+  form; the keyboard inset no longer hides the list.
+- Playback notifications and lock-screen controls now appear. Android 13+ requires the
+  runtime notification permission, and the MediaSession had no track metadata or launch
+  intent; the app now asks once, shows title/artist/album on the lock screen and in the
+  shade, and opens the app when tapped.
+
 ## [0.1.0] - 2026-11-20
 
 The first public release.
@@ -49,5 +84,6 @@ The first public release.
   snapshot.
 - A failed scan no longer leaves the list stuck in a permanent scanning state.
 
-[Unreleased]: https://github.com/mel1s4/music-player-app/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/mel1s4/music-player-app/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/mel1s4/music-player-app/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/mel1s4/music-player-app/releases/tag/v0.1.0

@@ -1,20 +1,27 @@
 package dev.melisa.musicplayer.ui.screens
 
 import android.net.Uri
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -29,19 +36,19 @@ import androidx.compose.material.icons.filled.Comment
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Hearing
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.Numbers
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Title
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Button
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -54,8 +61,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -90,6 +100,7 @@ fun EditMetadataScreen(
     onClose: () -> Unit,
     onSaved: (Uri) -> Unit,
     onCompress: (Track) -> Unit = {},
+    onHearDifference: (Track, AudioFileDetails?) -> Unit = { _, _ -> },
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -109,11 +120,44 @@ fun EditMetadataScreen(
         audioDetails = AudioFileInfo.read(context, track.uri, track.sizeBytes)
     }
 
+    fun saveMetadata() {
+        val current = metadata ?: return
+        if (saving) return
+        scope.launch {
+            saving = true
+            errorRes = null
+
+            var target = track.uri
+            val originalName = fileInfo?.name.orEmpty()
+            if (fileName.isNotBlank() && fileName != originalName) {
+                val renamed = TagEditor.rename(context, track.uri, fileName)
+                if (renamed == null) {
+                    errorRes = R.string.metadata_rename_failed
+                    saving = false
+                    return@launch
+                }
+                target = renamed
+            }
+
+            when (val result = TagEditor.write(context, target, current)) {
+                is TagWriteResult.Success -> onSaved(target)
+                is TagWriteResult.NoWritePermission ->
+                    errorRes = R.string.metadata_no_write_permission
+                is TagWriteResult.Failed ->
+                    errorRes = R.string.metadata_write_failed
+            }
+            saving = false
+        }
+    }
+
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .safeDrawingPadding(),
+                .safeDrawingPadding()
+                // The app draws edge-to-edge, so an open keyboard would otherwise sit
+                // on top of the form and hide the suggestion list it just opened.
+                .imePadding(),
         ) {
             Row(
                 modifier = Modifier
@@ -142,49 +186,6 @@ fun EditMetadataScreen(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                TextButton(
-                    enabled = metadata != null && !saving,
-                    onClick = {
-                        val current = metadata ?: return@TextButton
-                        scope.launch {
-                            saving = true
-                            errorRes = null
-
-                            var target = track.uri
-                            val originalName = fileInfo?.name.orEmpty()
-                            if (fileName.isNotBlank() && fileName != originalName) {
-                                val renamed = TagEditor.rename(context, track.uri, fileName)
-                                if (renamed == null) {
-                                    errorRes = R.string.metadata_rename_failed
-                                    saving = false
-                                    return@launch
-                                }
-                                target = renamed
-                            }
-
-                            when (val result = TagEditor.write(context, target, current)) {
-                                is TagWriteResult.Success -> onSaved(target)
-                                is TagWriteResult.NoWritePermission ->
-                                    errorRes = R.string.metadata_no_write_permission
-                                is TagWriteResult.Failed ->
-                                    errorRes = R.string.metadata_write_failed
-                            }
-                            saving = false
-                        }
-                    },
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        stringResource(
-                            if (saving) R.string.metadata_saving else R.string.action_save,
-                        ),
-                    )
-                }
             }
 
             errorRes?.let { res ->
@@ -199,7 +200,9 @@ fun EditMetadataScreen(
             val current = metadata
             if (current == null) {
                 Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -218,7 +221,8 @@ fun EditMetadataScreen(
             } else {
                 Column(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .weight(1f)
+                        .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 20.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -230,36 +234,14 @@ fun EditMetadataScreen(
                         fallbackSizeBytes = track.sizeBytes,
                         durationMs = track.durationMs,
                         onCompress = { onCompress(track) },
+                        onHearDifference = { onHearDifference(track, audioDetails) },
                     )
 
-                    SectionKicker(
-                        text = stringResource(R.string.metadata_section_file),
-                        accent = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.padding(top = 6.dp),
-                    )
-                    Field(
-                        labelRes = R.string.field_file_name,
-                        icon = Icons.Filled.Description,
-                        value = fileName,
-                        onValueChange = { fileName = it },
-                    )
-                    Field(
-                        labelRes = R.string.field_folder,
-                        icon = Icons.Filled.Folder,
-                        value = fileInfo?.folder.orEmpty(),
-                        readOnly = true,
-                        onValueChange = {},
-                    )
-
+                    // Artist and title come first: they identify the song, while the
+                    // file name below is only the storage detail that implements it.
                     SectionKicker(
                         text = stringResource(R.string.metadata_section_details),
-                        modifier = Modifier.padding(top = 10.dp),
-                    )
-                    Field(
-                        labelRes = R.string.field_title,
-                        icon = Icons.Filled.Title,
-                        value = current.title,
-                        onValueChange = { metadata = current.copy(title = it) },
+                        modifier = Modifier.padding(top = 6.dp),
                     )
                     Field(
                         labelRes = R.string.field_artist,
@@ -267,6 +249,12 @@ fun EditMetadataScreen(
                         value = current.artist,
                         suggestions = knownArtists,
                         onValueChange = { metadata = current.copy(artist = it) },
+                    )
+                    Field(
+                        labelRes = R.string.field_title,
+                        icon = Icons.Filled.Title,
+                        value = current.title,
+                        onValueChange = { metadata = current.copy(title = it) },
                     )
                     Field(
                         labelRes = R.string.field_album,
@@ -321,6 +309,25 @@ fun EditMetadataScreen(
                         onValueChange = { metadata = current.copy(comment = it) },
                     )
 
+                    SectionKicker(
+                        text = stringResource(R.string.metadata_section_file),
+                        accent = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.padding(top = 10.dp),
+                    )
+                    Field(
+                        labelRes = R.string.field_file_name,
+                        icon = Icons.Filled.Description,
+                        value = fileName,
+                        onValueChange = { fileName = it },
+                    )
+                    Field(
+                        labelRes = R.string.field_folder,
+                        icon = Icons.Filled.Folder,
+                        value = fileInfo?.folder.orEmpty(),
+                        readOnly = true,
+                        onValueChange = {},
+                    )
+
                     // These are app-level and apply instantly — unlike the fields above,
                     // which only reach the file when the user taps Save.
                     HorizontalDivider(
@@ -337,6 +344,55 @@ fun EditMetadataScreen(
 
                     Spacer(Modifier.height(24.dp))
                 }
+            }
+
+            // Sticky above the keyboard: the primary action never scrolls out of reach.
+            SaveBar(
+                saving = saving,
+                enabled = metadata != null && !saving,
+                onSave = ::saveMetadata,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SaveBar(
+    saving: Boolean,
+    enabled: Boolean,
+    onSave: () -> Unit,
+) {
+    Surface(color = MaterialTheme.colorScheme.background) {
+        Column {
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+            Button(
+                onClick = onSave,
+                enabled = enabled,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 10.dp)
+                    .height(52.dp),
+                shape = RoundedCornerShape(16.dp),
+            ) {
+                if (saving) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    stringResource(
+                        if (saving) R.string.metadata_saving else R.string.action_save,
+                    ),
+                )
             }
         }
     }
@@ -355,70 +411,139 @@ private fun Field(
     modifier: Modifier = Modifier,
     onValueChange: (String) -> Unit,
 ) {
-    var menuOpen by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    var expanded by remember { mutableStateOf(false) }
     val leading: (@Composable () -> Unit)? = icon?.let { vector ->
         { Icon(vector, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
     }
+    // Existing values are an autocomplete source, not a closed list: whatever is typed
+    // stays, and matches are found case-insensitively anywhere in the name. Exact and
+    // prefix matches come first, so "cold" puts "Coldplay" at the top.
     val options = remember(value, suggestions) {
         val needle = value.trim()
-        val isExistingValue = suggestions.any { it.equals(needle, ignoreCase = true) }
-        when {
-            // Empty: offer everything.
-            needle.isEmpty() -> suggestions
-            // Already an existing value: offer the *others*, so switching is one tap.
-            isExistingValue -> suggestions.filterNot { it.equals(needle, ignoreCase = true) }
-            // Mid-typing: narrow down, like an autocomplete.
-            else -> suggestions.filter { it.contains(needle, ignoreCase = true) }
-        }.take(8)
+        val matches = if (needle.isEmpty()) {
+            suggestions
+        } else {
+            suggestions.filter { it.contains(needle, ignoreCase = true) }
+        }
+        matches
+            .sortedWith(
+                compareBy<String> { !it.equals(needle, ignoreCase = true) }
+                    .thenBy { !it.startsWith(needle, ignoreCase = true) }
+                    .thenBy { it.lowercase() },
+            )
+            // The panel scrolls; this just stops an entire artist catalogue from being
+            // composed at once when the field is empty.
+            .take(60)
     }
+    val hasSuggestions = suggestions.isNotEmpty()
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = tween(180),
+        label = "suggestions-arrow",
+    )
 
-    Box(modifier = modifier.fillMaxWidth()) {
+    Column(modifier = modifier.fillMaxWidth()) {
         OutlinedTextField(
             value = value,
-            onValueChange = onValueChange,
+            onValueChange = { typed ->
+                onValueChange(typed)
+                // Autocomplete opens as the user types, but only while something
+                // actually matches — a wall of "no matches" under every keystroke
+                // would be worse than no list at all.
+                if (hasSuggestions) {
+                    expanded = typed.isBlank() ||
+                        suggestions.any { it.contains(typed.trim(), ignoreCase = true) }
+                }
+            },
             singleLine = singleLine,
             minLines = minLines,
             readOnly = readOnly,
             // Decorative: the label already names the field, so a description would duplicate it.
             leadingIcon = leading,
-            // Existing values stay one tap away, but the field itself remains free text:
-            // typing a brand-new artist or album is the primary path, not an exception.
-            trailingIcon = if (suggestions.isEmpty()) {
-                null
-            } else {
+            trailingIcon = if (hasSuggestions) {
                 {
-                    IconButton(onClick = { menuOpen = true }) {
+                    IconButton(onClick = { expanded = !expanded }) {
                         Icon(
                             imageVector = Icons.Filled.ArrowDropDown,
                             contentDescription = stringResource(R.string.metadata_choose_existing),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.rotate(arrowRotation),
                         )
                     }
                 }
+            } else {
+                null
             },
             label = { Text(stringResource(labelRes)) },
             keyboardOptions = KeyboardOptions(
                 keyboardType = if (numeric) KeyboardType.Number else KeyboardType.Text,
             ),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { focus ->
+                    // Leaving the field must not leave a wall of names covering the form.
+                    if (!focus.isFocused) expanded = false
+                },
         )
 
-        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-            if (options.isEmpty()) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.metadata_no_matches)) },
-                    enabled = false,
-                    onClick = {},
-                )
-            } else {
-                options.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(option) },
-                        onClick = {
-                            onValueChange(option)
-                            menuOpen = false
-                        },
-                    )
+        // Inline instead of a DropdownMenu: this lives inside the page's own scroll, so
+        // the list can always be scrolled with the same gesture that scrolls the form.
+        // The height cap fits a little over five rows; anything beyond scrolls.
+        if (expanded && hasSuggestions) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 6.dp)
+                    .heightIn(max = 280.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                tonalElevation = 2.dp,
+            ) {
+                Column(
+                    modifier = Modifier
+                        .verticalScroll(rememberScrollState())
+                        .padding(vertical = 4.dp),
+                ) {
+                    if (options.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.metadata_no_matches),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        options.forEach { option ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onValueChange(option)
+                                        expanded = false
+                                        focusManager.clearFocus()
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 13.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = option,
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                if (option.equals(value.trim(), ignoreCase = true)) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -429,12 +554,14 @@ private fun Field(
  * Size and compression at a glance. Users editing tags rarely know whether the file is
  * a 3 MB MP3 or a 30 MB FLAC, and that context matters before renaming or re-tagging.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FileSummary(
     details: AudioFileDetails?,
     fallbackSizeBytes: Long,
     durationMs: Long,
     onCompress: () -> Unit,
+    onHearDifference: () -> Unit,
 ) {
     val sizeBytes = details?.sizeBytes?.takeIf { it > 0L } ?: fallbackSizeBytes
     val sizeText = if (sizeBytes > 0L) "%.1f MB".format(sizeBytes / 1_048_576.0) else "—"
@@ -494,10 +621,23 @@ private fun FileSummary(
                     )
                 }
             }
-            Row(
+            // Wrap instead of squeezing: at large font scales the two labels no
+            // longer fit side by side, and losing either action would be worse than
+            // the extra row.
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
+                TextButton(onClick = onHearDifference) {
+                    Icon(
+                        imageVector = Icons.Filled.Hearing,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.hear_difference))
+                }
                 TextButton(onClick = onCompress) {
                     Text(stringResource(R.string.action_compress))
                 }

@@ -481,7 +481,7 @@ private fun CompressSummary(state: CompressUiState, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun failureText(failure: CompressFailure): String = stringResource(
+internal fun failureText(failure: CompressFailure): String = stringResource(
     when (failure) {
         CompressFailure.UnsupportedFormat -> R.string.compress_error_unsupported
         CompressFailure.Encoder -> R.string.compress_error_encoder

@@ -1,5 +1,7 @@
 package dev.melisa.musicplayer.ui.screens
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -28,6 +30,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Compress
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -49,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -75,6 +79,7 @@ fun SettingsScreen(
 ) {
     // Controls sit on the hand's side; the labels take the remaining space.
     val onEnd = settings.hand == HoldingHand.Right
+    val context = LocalContext.current
 
     // Opens the system folder picker. The Activity result is the tree URI we persist.
     val folderPicker = rememberLauncherForActivityResult(
@@ -200,6 +205,17 @@ fun SettingsScreen(
             checked = settings.syncToFiles,
             onCheckedChange = { settings.updateSyncToFiles(it) },
             controlsOnEnd = onEnd,
+        )
+        ActionRow(
+            title = stringResource(R.string.settings_notifications),
+            subtitle = stringResource(R.string.settings_notifications_desc),
+            icon = Icons.Filled.Notifications,
+            onClick = {
+                context.startActivity(
+                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName),
+                )
+            },
         )
 
         Spacer(Modifier.height(8.dp))
@@ -529,7 +545,12 @@ private fun ToggleRow(
 }
 
 @Composable
-private fun ActionRow(title: String, subtitle: String, onClick: () -> Unit) {
+private fun ActionRow(
+    title: String,
+    subtitle: String,
+    icon: ImageVector = Icons.Filled.Compress,
+    onClick: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -538,7 +559,7 @@ private fun ActionRow(title: String, subtitle: String, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = Icons.Filled.Compress,
+            imageVector = icon,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(22.dp),

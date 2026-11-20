@@ -151,13 +151,21 @@ that state is false; no decorative animation runs forever on a static screen.
 **Player**
 - Persistent mini player with artwork, title, live equalizer, progress LED bar, play and
   next — controls mirror to the holding hand (`Left` / `Right` in Settings).
-- Swipe the mini player up, or drag the Now Playing header down, to open / close.
-- Swipe the Now Playing artwork to change song: left is next, right is previous. The
+- Swipe the mini player up to open the player. Inside it, swipe **down** on the header
+  or artwork to hide the player, and swipe **up** on either to open the song editor.
+- Swipe the Now Playing artwork sideways to change song: left is next, right is previous. The
   cover tracks the finger (slight rotation and shrink) and the direction pill — “Next” or
   “Previous” — slides out from behind it. Past a short threshold the adjacent item plays;
   otherwise the cover springs back. Swipe always moves to the adjacent item, whereas the
   transport's previous button keeps the usual “restart if past 3 s” behaviour.
 - Haptics on play, favourite and shuffle.
+- **Notification and lock screen** are owned by the Media3 `MediaSessionService`: the
+  MediaStyle notification and SystemUI controls read the same session. Every queue item
+  carries `MediaMetadata` (title, artist, album), and the session has a launch
+  `PendingIntent`, so tapping the notification or the lock-screen card opens the app.
+- Android 13+ gates notifications behind `POST_NOTIFICATIONS`. The app asks once on
+  launch (persisted in settings, so it is not repeated); **Settings → Playback
+  notifications** opens the system notification page if the user changes their mind.
 - Ratings start at **0**, move in **±1** steps and can go **negative**: the player shows
   the signed score between the thumbs, and the dashboard rows show only the tinted thumb.
   Negative scores are the disliked side; the weighted shuffle floors every non-positive
@@ -180,7 +188,8 @@ that state is false; no decorative animation runs forever on a static screen.
 - The first time a track URI is seen it is stamped in `LibraryExtras.addedAt`, seeded
   with the file's own modification time when the provider exposes it, and persisted.
   Rescans and tag edits never move an existing stamp; renames follow the file.
-- "Continue listening" card appears only when something is queued.
+- **No "Continue listening" card**: the mini player already carries the current track
+  and opens the full player, so a duplicate card above the lists would add nothing.
 - Top-rated and disliked lists now show rank + a tinted thumb, so the rating direction
   is visible instead of a phrase.
 - Empty library becomes a real empty state with a route to Settings.
@@ -246,19 +255,23 @@ that state is false; no decorative animation runs forever on a static screen.
   it never appears twice, while deeper stars carry their full path as a subtitle to
   disambiguate same-named folders. Stars are stored by path, resolved against the live
   tree on every draw, so a folder that was moved or deleted simply drops out.
-- In the metadata editor, the artist and album fields keep free text but gain a
-  dropdown of existing values: it offers the other values when the field already
-  matches one, narrows down while typing, and always allows a brand-new name.
+- In the metadata editor, the artist and album fields keep free text and open a
+  height-capped, scrollable autocomplete panel while typing. Exact and prefix matches
+  come first, and a brand-new name is always allowed.
 
 **Edit song**
 - The metadata editor opens with a **file summary**: size in MB, codec and bitrate
   (“MP3 · 192 kbps”), duration, and a lossy/lossless badge. The size comes from the
   document (falling back to the scan), the bitrate/codec from the container's audio
   track with a metadata-retriever and extension fallback.
-- The form is grouped into **File** (name, folder) and **Details** (title, artist, album,
-  album artist, year, track, disc, genre, comment). The three short numeric fields share
-  one row, the comment is multi-line, and long-text fields keep the full width. Artist
-  and album keep the existing-value dropdown.
+- The form starts with **Details** (artist, title, album, album artist, year, track,
+  disc, genre, comment) and leaves the **File** fields (name, folder) for the end. The
+  three short numeric fields share one row, the comment is multi-line, and long-text
+  fields keep the full width.
+- **Save** is a sticky bottom bar: it sits directly above the keyboard while the form
+  scrolls, so the primary action is always in reach.
+- The file summary offers **Hear the difference**, which opens the bitrate audition
+  helper described in section 10.
 
 **Collections, playlists & tags**
 - Album and artist indices get section counters and real cover art; artists without a
@@ -424,6 +437,13 @@ source rate is outside what the AAC encoder accepts, a second `MediaCodec` encod
 AAC-LC, and `MediaMuxer` writes MPEG-4. No native library, no ffmpeg, no APK weight.
 The cost of that choice is format coverage: output is always `.m4a`; MediaMuxer cannot
 write MP3 or Ogg.
+
+**Hear the difference** is the same encoder pointed at a decision: it converts a
+20-second excerpt from the middle of the song (or the full song) at each selected
+bitrate into private cache files. A dedicated `ExoPlayer` plays the original and the
+versions back to back, the original clipped to the same window, so the comparison is
+apples to apples. Keeping a version runs the normal full-song `CompressAudio` path; the
+previews never touch the library file.
 
 `CompressAudio` owns the transaction around it:
 

@@ -21,7 +21,7 @@ account, no upload, no network permission.
 - **Android 8.0 (API 26) or newer.**
 - The release page includes a **SHA-256 checksum**; verify it before installing.
 - GitHub Releases is the official distribution channel; the latest version is
-  [v0.1.0](https://github.com/mel1s4/music-player-app/releases/tag/v0.1.0).
+  [v0.2.0](https://github.com/mel1s4/music-player-app/releases/tag/v0.2.0).
 - Prefer to build it yourself? See [Build and run](#build-and-run).
 - Already have a debug/test build installed? Uninstall it first — Android will not
   update across different signing keys.
@@ -62,14 +62,18 @@ notes, palette, contrast measurements and motion inventory are in
 
 ### Playback
 
-- Background playback through a Media3 `MediaSessionService`, with notification and
-  lock-screen controls.
+- Background playback through a Media3 `MediaSessionService`, with a media
+  notification and lock-screen controls showing the current title, artist and album.
+  Tapping either opens the app. Android 13+ asks for notification permission once on
+  first launch; **Settings → Playback notifications** reopens the system page later.
 - Queue playback, next/previous, seek and shuffle.
 - **Weighted shuffle** that uses signed ratings: liked tracks are more likely, disliked
   ones less likely.
 - Pause when headphones are unplugged and proper audio-focus handling.
 - Persistent mini player and a full Now Playing screen.
 - Swipe the **cover art** left/right to move to the next/previous track.
+- Swipe **down** on the Now Playing header or artwork to hide it, or **up** to open the
+  song editor.
 
 ### Ratings, tags and metadata
 
@@ -81,7 +85,10 @@ notes, palette, contrast measurements and motion inventory are in
 - Optional **write-through**: ratings, favourites and app tags can be mirrored into the
   audio file's own metadata, so they survive a reinstall and travel to other players.
 - Rename files, edit title/artist/album/year/track/disc/genre/comment, and manage
-  artwork.
+  artwork. The Save action stays pinned above the keyboard while the form scrolls.
+- **Hear the difference**: audition a 20-second excerpt or the full song at several
+  bitrates, then keep the version that sounds right. The chosen bitrate is saved as the
+  full song.
 - **Free up space** by transcoding tracks to AAC, with the option to replace the
   original or keep both.
 

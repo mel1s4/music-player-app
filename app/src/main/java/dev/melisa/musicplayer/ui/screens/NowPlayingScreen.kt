@@ -139,11 +139,48 @@ fun NowPlayingScreen(
     val sliderValue = scrub ?: (positionMs.toFloat() / total).coerceIn(0f, 1f)
     val shownPosition = scrub?.let { (it * total).toLong() } ?: positionMs
 
-    // Drag the header down to dismiss, the way every sheet on the platform works.
+    // Swipe down on the grab area or the artwork to hide the player, or swipe up to
+    // open the song editor. The sheet follows the finger while dragging.
     val dragY = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val dismissThreshold = with(LocalDensity.current) { 130.dp.toPx() }
+    val upLimitPx = with(LocalDensity.current) { 180.dp.toPx() }
     val haptics = LocalHapticFeedback.current
+    val latestClose by rememberUpdatedState(onClose)
+    val latestEditMetadata by rememberUpdatedState(onEditMetadata)
+    val sheetDrag = Modifier.pointerInput(track.uri) {
+        detectVerticalDragGestures(
+            onDragEnd = {
+                val offset = dragY.value
+                when {
+                    offset > dismissThreshold -> latestClose()
+                    offset < -dismissThreshold -> {
+                        // Reset before the editor covers the player, so coming back
+                        // does not leave the sheet parked halfway up the screen.
+                        scope.launch {
+                            dragY.animateTo(0f, animationSpec = tween(Motion.Fast))
+                        }
+                        latestEditMetadata()
+                    }
+                    else -> scope.launch {
+                        dragY.animateTo(
+                            targetValue = 0f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessMedium,
+                            ),
+                        )
+                    }
+                }
+            },
+        ) { _, delta ->
+            scope.launch {
+                dragY.snapTo(
+                    (dragY.value + delta).coerceIn(-upLimitPx, Float.MAX_VALUE),
+                )
+            }
+        }
+    }
 
     // Horizontal swipe over the artwork. The cover follows the finger, then either
     // snaps back or commits to the neighbouring track.
@@ -152,6 +189,11 @@ fun NowPlayingScreen(
     val latestSwipeNext by rememberUpdatedState(onSwipeToNext)
     val latestSwipePrevious by rememberUpdatedState(onSwipeToPrevious)
     LaunchedEffect(track.uri) { swipeX.snapTo(0f) }
+
+    // Disliking the current song immediately skips to the next one, so the player
+    // would otherwise change without any feedback that the thumb-down registered.
+    // The badge is keyed to the screen (not the song), so it survives that transition.
+    val dislikeFeedback = remember { Animatable(0f) }
 
     Surface(
         modifier = Modifier
@@ -182,33 +224,11 @@ fun NowPlayingScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 22.dp),
             ) {
-                // Grab area: the whole header row can be dragged down.
+                // Grab area: the whole header row responds to the vertical swipe.
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .pointerInput(Unit) {
-                            detectVerticalDragGestures(
-                                onDragEnd = {
-                                    if (dragY.value > dismissThreshold) {
-                                        onClose()
-                                    } else {
-                                        scope.launch {
-                                            dragY.animateTo(
-                                                targetValue = 0f,
-                                                animationSpec = spring(
-                                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                                    stiffness = Spring.StiffnessMedium,
-                                                ),
-                                            )
-                                        }
-                                    }
-                                },
-                            ) { _, delta ->
-                                scope.launch {
-                                    dragY.snapTo((dragY.value + delta).coerceAtLeast(0f))
-                                }
-                            }
-                        },
+                        .then(sheetDrag),
                 ) {
                     Box(
                         modifier = Modifier
@@ -309,6 +329,7 @@ fun NowPlayingScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .then(sheetDrag)
                             .pointerInput(track.uri) {
                                 detectHorizontalDragGestures(
                                     onDragEnd = {
@@ -588,7 +609,22 @@ fun NowPlayingScreen(
                             description = stringResource(R.string.action_dislike),
                             tint = MaterialTheme.colorScheme.error,
                             active = rating < LibraryExtras.DEFAULT_RATING,
-                            onClick = onDislike,
+                            onClick = {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onDislike()
+                                scope.launch {
+                                    dislikeFeedback.stop()
+                                    dislikeFeedback.snapTo(0f)
+                                    dislikeFeedback.animateTo(
+                                        targetValue = 1f,
+                                        animationSpec = tween(
+                                            durationMillis = 1100,
+                                            easing = Motion.Standard,
+                                        ),
+                                    )
+                                    dislikeFeedback.snapTo(0f)
+                                }
+                            },
                         )
                         Column(
                             modifier = Modifier
@@ -621,6 +657,53 @@ fun NowPlayingScreen(
                 }
 
                 Spacer(Modifier.height(24.dp))
+            }
+
+            // Transient confirmation: pops in, holds for a beat and fades out.
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .graphicsLayer {
+                        val progress = dislikeFeedback.value
+                        alpha = when {
+                            progress <= 0f -> 0f
+                            progress < 0.16f -> progress / 0.16f
+                            progress < 0.72f -> 1f
+                            else -> ((1f - progress) / 0.28f).coerceIn(0f, 1f)
+                        }
+                        val pop = 0.7f + 0.3f * (progress / 0.22f).coerceIn(0f, 1f)
+                        scaleX = pop
+                        scaleY = pop
+                        translationY = -30.dp.toPx() * progress
+                    },
+            ) {
+                NeonPanel(
+                    container = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    corner = 22.dp,
+                    modifier = Modifier.neonGlow(
+                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.35f),
+                        radius = 16.dp,
+                        shape = RoundedCornerShape(22.dp),
+                    ),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.ThumbDown,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(22.dp),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            text = stringResource(R.string.rating_disliked),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
             }
         }
     }

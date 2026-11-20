@@ -95,6 +95,7 @@ fun SearchScreen(
     onCompress: (Track) -> Unit,
     onLike: (Track) -> Unit,
     onDislike: (Track) -> Unit,
+    onDelete: (Track) -> Unit,
     onOpenAlbum: (String) -> Unit,
     onOpenArtist: (String) -> Unit,
 ) {
@@ -221,6 +222,7 @@ fun SearchScreen(
                     onCompress = onCompress,
                     onLike = onLike,
                     onDislike = onDislike,
+                    onDelete = onDelete,
                     onOpenAlbum = onOpenAlbum,
                     onOpenArtist = onOpenArtist,
                 )
@@ -250,6 +252,7 @@ private fun Results(
     onCompress: (Track) -> Unit,
     onLike: (Track) -> Unit,
     onDislike: (Track) -> Unit,
+    onDelete: (Track) -> Unit,
     onOpenAlbum: (String) -> Unit,
     onOpenArtist: (String) -> Unit,
 ) {
@@ -363,6 +366,7 @@ private fun Results(
                     onCompress = { onCompress(track) },
                     onLike = { onLike(track) },
                     onDislike = { onDislike(track) },
+                    onDelete = { onDelete(track) },
                     modifier = Modifier.animateItem(),
                 )
             }

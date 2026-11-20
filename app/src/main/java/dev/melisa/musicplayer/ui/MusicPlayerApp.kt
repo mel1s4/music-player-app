@@ -1,9 +1,14 @@
 package dev.melisa.musicplayer.ui
 
+import android.Manifest
 import android.content.ComponentName
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -45,17 +50,20 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -83,12 +91,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import dev.melisa.musicplayer.R
 import dev.melisa.musicplayer.data.AppSettings
+import dev.melisa.musicplayer.data.AudioFileDetails
 import dev.melisa.musicplayer.data.CompressAudio
 import dev.melisa.musicplayer.data.CompressFailure
 import dev.melisa.musicplayer.data.CompressOutcome
@@ -98,6 +108,7 @@ import dev.melisa.musicplayer.data.MusicLibrary
 import dev.melisa.musicplayer.data.SongArt
 import dev.melisa.musicplayer.data.SongFileSync
 import dev.melisa.musicplayer.data.Track
+import dev.melisa.musicplayer.data.deleteSongFile
 import dev.melisa.musicplayer.data.weightedShuffle
 import dev.melisa.musicplayer.playback.PlaybackService
 import dev.melisa.musicplayer.ui.components.AddToPlaylistDialog
@@ -121,6 +132,7 @@ import dev.melisa.musicplayer.ui.screens.EditCollectionScreen
 import dev.melisa.musicplayer.ui.screens.EditMetadataScreen
 import dev.melisa.musicplayer.ui.screens.FilesScreen
 import dev.melisa.musicplayer.ui.screens.FreeUpSpaceScreen
+import dev.melisa.musicplayer.ui.screens.HearDifferenceScreen
 import dev.melisa.musicplayer.ui.screens.NowPlayingScreen
 import dev.melisa.musicplayer.ui.screens.PlaylistsDestination
 import dev.melisa.musicplayer.ui.screens.SearchScreen
@@ -139,6 +151,7 @@ private const val TAG = "MusicPlayerApp"
 
 @Composable
 fun MusicPlayerApp(settings: AppSettings) {
+    RequestNotificationPermission(settings)
     var current by rememberSaveable { mutableStateOf(Destination.Dashboard) }
     // Search is no longer a tab: it is opened from the top bar and returns where it came from.
     var searchReturn by rememberSaveable { mutableStateOf(Destination.Dashboard) }
@@ -258,7 +271,7 @@ fun MusicPlayerApp(settings: AppSettings) {
         val index = ordered.indexOfFirst { it.uri == track.uri }.coerceAtLeast(0)
         nowPlaying = track
         player.setMediaItems(
-            ordered.map { MediaItem.Builder().setUri(it.uri).setMediaId(it.uri.toString()).build() },
+            ordered.map { it.toMediaItem() },
             index,
             0L,
         )
@@ -279,9 +292,7 @@ fun MusicPlayerApp(settings: AppSettings) {
         }
         val position = player.currentPosition
         player.setMediaItems(
-            (listOf(currentTrack) + rest).map {
-                MediaItem.Builder().setUri(it.uri).setMediaId(it.uri.toString()).build()
-            },
+            (listOf(currentTrack) + rest).map { it.toMediaItem() },
             0,
             position,
         )
@@ -349,6 +360,12 @@ fun MusicPlayerApp(settings: AppSettings) {
 
     var dialogTrack by remember { mutableStateOf<Track?>(null) }
     var editingTrack by remember { mutableStateOf<Track?>(null) }
+    // The bitrate audition page opened from the editor.
+    var compareTrack by remember { mutableStateOf<Track?>(null) }
+    var compareDetails by remember { mutableStateOf<AudioFileDetails?>(null) }
+    // The song whose file the user asked to delete; the confirmation dialog reads it.
+    var deleteTarget by remember { mutableStateOf<Track?>(null) }
+    var deleteFailed by remember { mutableStateOf(false) }
     var showPlaylistPicker by remember { mutableStateOf(false) }
     var showTagEditor by remember { mutableStateOf(false) }
     var showNewPlaylist by remember { mutableStateOf(false) }
@@ -359,6 +376,7 @@ fun MusicPlayerApp(settings: AppSettings) {
     var compressJob by remember { mutableStateOf<Job?>(null) }
     var showFreeSpace by rememberSaveable { mutableStateOf(false) }
     val compressScope = rememberCoroutineScope()
+    val deleteScope = rememberCoroutineScope()
 
     /**
      * A top-level destination change closes whatever album/artist page was open on top
@@ -420,7 +438,10 @@ fun MusicPlayerApp(settings: AppSettings) {
         runCatching {
             player.replaceMediaItem(
                 index,
-                MediaItem.Builder().setUri(newUri).setMediaId(newUri.toString()).build(),
+                player.getMediaItemAt(index).buildUpon()
+                    .setUri(newUri)
+                    .setMediaId(newUri.toString())
+                    .build(),
             )
             player.seekTo(index, position)
             if (wasPlaying) player.play()
@@ -457,7 +478,10 @@ fun MusicPlayerApp(settings: AppSettings) {
         val result = runCatching {
             player.replaceMediaItem(
                 index,
-                MediaItem.Builder().setUri(newUri).setMediaId(newUri.toString()).build(),
+                player.getMediaItemAt(index).buildUpon()
+                    .setUri(newUri)
+                    .setMediaId(newUri.toString())
+                    .build(),
             )
             player.prepare()
             player.seekTo(index, position)
@@ -585,6 +609,39 @@ fun MusicPlayerApp(settings: AppSettings) {
         showTagEditor = true
     }
 
+    /**
+     * Deletes a file only after the confirmation dialog accepted. Ratings, tags,
+     * favourites and playlist entries go with it; if it was queued, the queue drops
+     * that item so the player can never try to reopen a file that no longer exists.
+     */
+    fun deleteTrackFile(track: Track) {
+        deleteScope.launch {
+            if (!deleteSongFile(context, track.uri)) {
+                deleteFailed = true
+                return@launch
+            }
+            extras.forget(track.uri.toString())
+            if (editingTrack?.uri == track.uri) editingTrack = null
+
+            val player = controller
+            val index = player?.let { p ->
+                (0 until p.mediaItemCount).firstOrNull { i ->
+                    p.getMediaItemAt(i).mediaId == track.uri.toString()
+                }
+            }
+            if (player != null && index != null) {
+                player.removeMediaItem(index)
+                if (player.mediaItemCount == 0) {
+                    player.stop()
+                    nowPlaying = null
+                }
+            } else if (nowPlaying?.uri == track.uri) {
+                nowPlaying = null
+            }
+            refreshToken++
+        }
+    }
+
     BackHandler(enabled = drawerOpen) { drawerOpen = false }
     BackHandler(enabled = showNowPlaying && !drawerOpen) { showNowPlaying = false }
     BackHandler(enabled = editingTrack != null) { editingTrack = null }
@@ -693,7 +750,6 @@ fun MusicPlayerApp(settings: AppSettings) {
                             onPlay = { play(it) },
                             onRescan = { refreshToken++ },
                             onFreeSpace = { showFreeSpace = true },
-                            onOpenPlayer = { showNowPlaying = true },
                             onOpenSettings = { navigate(Destination.Settings) },
                             onFilesDeleted = { refreshToken++ },
                         )
@@ -711,6 +767,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                             onCompress = { openCompress(listOf(it)) },
                             onLike = { extras.like(it.uri.toString()) },
                             onDislike = { dislike(it) },
+                            onDelete = { deleteTarget = it },
                             onOpenFiles = { navigate(Destination.Files) },
                             onOpenAlbums = { navigate(Destination.Albums) },
                             onOpenArtists = { navigate(Destination.Artists) },
@@ -728,6 +785,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                             onCompress = { openCompress(listOf(it)) },
                             onLike = { extras.like(it.uri.toString()) },
                             onDislike = { dislike(it) },
+                            onDelete = { deleteTarget = it },
                             path = filesPath,
                             onPathChange = { filesPath = it },
                         )
@@ -760,6 +818,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                             onCompress = { openCompress(listOf(it)) },
                             onLike = { extras.like(it.uri.toString()) },
                             onDislike = { dislike(it) },
+                            onDelete = { deleteTarget = it },
                             onOpenAlbum = { showAlbum(it) },
                             onOpenArtist = { showArtist(it) },
                         )
@@ -798,6 +857,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                         onCompress = { openCompress(listOf(it)) },
                         onLike = { extras.like(it.uri.toString()) },
                         onDislike = { dislike(it) },
+                        onDelete = { deleteTarget = it },
                         onEdit = { editAlbum = albumName },
                     )
                 }
@@ -819,6 +879,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                         onCompress = { openCompress(listOf(it)) },
                         onLike = { extras.like(it.uri.toString()) },
                         onDislike = { dislike(it) },
+                        onDelete = { deleteTarget = it },
                         onEdit = { editArtist = artistName },
                     )
                 }
@@ -973,6 +1034,85 @@ fun MusicPlayerApp(settings: AppSettings) {
                     refreshToken++
                 },
                 onCompress = { openCompress(listOf(it)) },
+                onHearDifference = { target, details ->
+                    // Do not play two sources at once: the comparison page owns audio.
+                    controller?.pause()
+                    compareDetails = details
+                    compareTrack = target
+                },
+            )
+        }
+
+        val comparing = compareTrack
+        if (comparing != null) {
+            HearDifferenceScreen(
+                track = comparing,
+                details = compareDetails,
+                onClose = { compareTrack = null },
+                onSaved = { result ->
+                    val oldUri = result.originalUri
+                    if (result.replaced) {
+                        extras.rekey(oldUri.toString(), result.newUri.toString())
+                        replacePlayingTrack(comparing, result.newUri)
+                    } else {
+                        // The provider refused the delete; the new file exists beside
+                        // the old one and keeps the same app-side state.
+                        extras.copyState(oldUri.toString(), result.newUri.toString())
+                    }
+                    if (editingTrack?.uri == oldUri) {
+                        editingTrack = editingTrack?.copy(
+                            uri = result.newUri,
+                            sizeBytes = result.newBytes,
+                            durationMs = result.durationMs,
+                        )
+                    }
+                    refreshToken++
+                },
+            )
+        }
+
+        val pendingDelete = deleteTarget
+        if (pendingDelete != null) {
+            AlertDialog(
+                onDismissRequest = { deleteTarget = null },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                },
+                title = { Text(stringResource(R.string.action_delete_file)) },
+                text = { Text(stringResource(R.string.delete_song_confirm, pendingDelete.title)) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        deleteTarget = null
+                        deleteTrackFile(pendingDelete)
+                    }) {
+                        Text(
+                            text = stringResource(R.string.action_delete),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { deleteTarget = null }) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                },
+            )
+        }
+
+        if (deleteFailed) {
+            AlertDialog(
+                onDismissRequest = { deleteFailed = false },
+                title = { Text(stringResource(R.string.action_delete_file)) },
+                text = { Text(stringResource(R.string.delete_song_failed)) },
+                confirmButton = {
+                    TextButton(onClick = { deleteFailed = false }) {
+                        Text(stringResource(R.string.action_close))
+                    }
+                },
             )
         }
 
@@ -1523,6 +1663,32 @@ private fun DrawerRow(
     }
 }
 
+/**
+ * Android 13+ gates media notifications behind a runtime permission. Asking once on
+ * launch means the foreground notification is already allowed by the time the first
+ * song starts, which is the moment MediaSessionService needs to post it.
+ */
+@Composable
+private fun RequestNotificationPermission(settings: AppSettings) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+    val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) {
+        // If declined, Settings -> Playback notifications opens the system page.
+    }
+    LaunchedEffect(settings.notificationPromptShown) {
+        val granted = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.POST_NOTIFICATIONS,
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!granted && !settings.notificationPromptShown) {
+            settings.markNotificationPromptShown()
+            launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+}
+
 /** Connects to the playback service. Null for the first frame or two while binding. */
 @Composable
 private fun rememberPlaybackController(context: Context): MediaController? {
@@ -1537,4 +1703,24 @@ private fun rememberPlaybackController(context: Context): MediaController? {
         onDispose { MediaController.releaseFuture(future) }
     }
     return controller
+}
+
+/**
+ * Queue items carry the song's identity, not just its URI: the notification and the
+ * lock screen read MediaMetadata, so a bare item would show the app name with no title
+ * or artist. Metadata survives URI changes through MediaItem.buildUpon().
+ */
+private fun Track.toMediaItem(target: Uri = uri): MediaItem {
+    val id = target.toString()
+    return MediaItem.Builder()
+        .setUri(target)
+        .setMediaId(id)
+        .setMediaMetadata(
+            MediaMetadata.Builder()
+                .setTitle(title.ifBlank { target.lastPathSegment.orEmpty() })
+                .setArtist(artist)
+                .setAlbumTitle(album)
+                .build(),
+        )
+        .build()
 }

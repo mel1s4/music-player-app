@@ -90,6 +90,9 @@
     <string name="playlist_dynamic_empty">Todavía no hay canciones con esta etiqueta.</string>
     <string name="action_edit">Editar</string>
     <string name="action_delete">Eliminar</string>
+    <string name="action_delete_file">Eliminar archivo</string>
+    <string name="delete_song_confirm">¿Eliminar «%1$s» del dispositivo? Se borrará el archivo de audio y no se puede deshacer.</string>
+    <string name="delete_song_failed">No se pudo eliminar el archivo. Puede ser de solo lectura o ya no existir.</string>
     <string name="action_back">Atrás</string>
     <string name="action_save">Guardar</string>
     <string name="nav_menu">Menú</string>
@@ -171,6 +174,8 @@
     <string name="recently_added">Añadido recientemente</string>
     <string name="settings_sync_files">Actualizar archivos de audio</string>
     <string name="settings_sync_files_desc">Escribe valoraciones, favoritos y etiquetas en los metadatos del archivo cuando cambian</string>
+    <string name="settings_notifications">Notificaciones de reproducción</string>
+    <string name="settings_notifications_desc">Muestra la canción actual en la pantalla de bloqueo y en la barra de notificaciones</string>
     <string name="rating_score">Puntuación</string>
     <string name="metadata_choose_existing">Elegir existente</string>
     <string name="metadata_no_matches">Sin coincidencias</string>
@@ -218,6 +223,31 @@
     <string name="compress_error_no_savings">Con esta tasa el archivo no se haría más pequeño. Elige una tasa más baja.</string>
     <string name="compress_error_io">No se pudo leer o escribir el archivo.</string>
     <string name="compress_already_small">Este archivo ya es pequeño con estas tasas.</string>
+    <!-- Escuchar la diferencia: comparador de tasas -->
+    <string name="hear_difference">Escuchar la diferencia</string>
+    <string name="hear_difference_hint">Compara cómo suena esta canción a distintas tasas de bits antes de reemplazar el archivo.</string>
+    <string name="hear_scope">Qué escuchar</string>
+    <string name="hear_scope_clip">Extracto de 20 segundos</string>
+    <string name="hear_scope_full">Canción completa</string>
+    <string name="hear_scope_clip_hint">De %1$s a %2$s</string>
+    <string name="hear_bitrates">Tasas a comparar</string>
+    <string name="hear_bitrates_hint">Elige una o varias. Cada una será una versión que puedes reproducir.</string>
+    <string name="hear_bitrate_label">%1$d kbps</string>
+    <string name="hear_start">Iniciar comparación</string>
+    <string name="hear_converting">Convirtiendo %1$d kbps…</string>
+    <string name="hear_results">Pulsa reproducir en cada versión y elige la que quieras conservar.</string>
+    <string name="hear_original">Original</string>
+    <string name="hear_keep">Conservar esta versión</string>
+    <string name="hear_keep_bitrate">Guardar a %1$d kbps</string>
+    <string name="hear_saving">Guardando la canción completa a %1$d kbps…</string>
+    <string name="hear_saved">Guardada a %1$d kbps</string>
+    <string name="hear_saved_hint">Se reemplazó el archivo original y la biblioteca ya apunta a esta versión.</string>
+    <string name="hear_saved_copy_hint">La nueva versión se guardó junto al original, que no se pudo eliminar.</string>
+    <string name="hear_change">Cambiar selección</string>
+    <string name="hear_no_bitrates">Este archivo ya es pequeño. Ninguna tasa inferior ahorraría espacio.</string>
+    <string name="hear_clip_note">Los extractos se toman del centro de la canción. La versión que conserves se guarda como canción completa.</string>
+    <string name="hear_full_note">Cada tasa seleccionada se convierte completa, así que puede tardar.</string>
+    <string name="hear_preview_failed">La vista previa de %1$d kbps falló:</string>
 
     <!-- Almacenamiento -->
     <string name="settings_storage">Almacenamiento</string>

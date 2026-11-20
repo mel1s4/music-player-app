@@ -63,6 +63,12 @@ object AudioTranscoder {
         targetBitrateKbps: Int,
         output: File,
         expectedDurationMs: Long = 0L,
+        /**
+         * Optional excerpt, in milliseconds. Both default to the whole file, which is
+         * what the compression flow uses; the comparison helper passes a 20 s window.
+         */
+        startMs: Long = 0L,
+        endMs: Long = 0L,
         onProgress: (Float) -> Unit = {},
     ): TranscodeOutput = withContext(Dispatchers.IO) {
         val extractor = MediaExtractor()
@@ -91,13 +97,40 @@ object AudioTranscoder {
                 .takeIf { it > 0 } ?: 44100
             val sourceChannels = inputFormat.intOr(MediaFormat.KEY_CHANNEL_COUNT, 0)
                 .takeIf { it > 0 } ?: 2
-            val durationUs = inputFormat.longOr(MediaFormat.KEY_DURATION, 0L)
+            val sourceDurationUs = inputFormat.longOr(MediaFormat.KEY_DURATION, 0L)
                 .takeIf { it > 0L }
                 ?: (expectedDurationMs * 1000L).takeIf { it > 0L }
                 ?: 0L
 
+            // A comparison can ask for a slice instead of the whole track. Seeking to
+            // the closest sync point can land a few frames early, so the loop below
+            // skips samples until the requested start is reached.
+            val clipStartUs = (startMs.coerceAtLeast(0L) * 1000L)
+                .coerceAtMost(sourceDurationUs.takeIf { it > 0L } ?: Long.MAX_VALUE)
+            val requestedEndUs = endMs.takeIf { it > startMs }?.times(1000L)
+            val clipEndUs = when {
+                requestedEndUs != null ->
+                    requestedEndUs.coerceAtMost(sourceDurationUs.takeIf { it > 0L } ?: requestedEndUs)
+                sourceDurationUs > clipStartUs -> sourceDurationUs
+                else -> 0L
+            }
+            val durationUs = when {
+                clipEndUs > clipStartUs -> clipEndUs - clipStartUs
+                expectedDurationMs > 0L -> expectedDurationMs * 1000L
+                else -> sourceDurationUs
+            }
+
             val outRate = outputSampleRate(sourceRate)
             val outChannels = sourceChannels.coerceIn(1, 2)
+
+            if (clipStartUs > 0L) {
+                extractor.seekTo(clipStartUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC)
+                var time = extractor.sampleTime
+                while (time >= 0L && time < clipStartUs) {
+                    extractor.advance()
+                    time = extractor.sampleTime
+                }
+            }
 
             val decoderFormat = inputFormat
             try {
@@ -152,7 +185,13 @@ object AudioTranscoder {
                         val buffer = decoder.getInputBuffer(inIndex)
                             ?: throw TranscodeException(TranscodeFailure.Io, "decoder input")
                         val size = extractor.readSampleData(buffer, 0)
-                        if (size < 0) {
+                        val sampleTime = extractor.sampleTime
+                        // Only an explicit excerpt end stops early; a full conversion
+                        // must not drop the last samples if their PTS overshoots the
+                        // container duration slightly.
+                        val pastEnd = requestedEndUs != null && clipEndUs > 0L &&
+                            sampleTime > clipEndUs
+                        if (size < 0 || pastEnd) {
                             decoder.queueInputBuffer(
                                 inIndex,
                                 0,
@@ -162,7 +201,7 @@ object AudioTranscoder {
                             )
                             inputDone = true
                         } else {
-                            decoder.queueInputBuffer(inIndex, 0, size, extractor.sampleTime, 0)
+                            decoder.queueInputBuffer(inIndex, 0, size, sampleTime, 0)
                             extractor.advance()
                         }
                     }
@@ -203,8 +242,10 @@ object AudioTranscoder {
                                     )
                                     sink.feed(bytes)
                                     if (durationUs > 0L) {
+                                        val elapsedUs =
+                                            (info.presentationTimeUs - clipStartUs).coerceAtLeast(0L)
                                         onProgress(
-                                            (info.presentationTimeUs.toFloat() / durationUs)
+                                            (elapsedUs.toFloat() / durationUs)
                                                 .coerceIn(0f, 0.99f),
                                         )
                                     }

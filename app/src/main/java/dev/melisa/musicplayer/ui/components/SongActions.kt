@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Compress
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.PlaylistAdd
@@ -224,6 +225,7 @@ fun SongActionMenu(
     onLike: () -> Unit,
     onDislike: () -> Unit,
     onCompress: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         DropdownMenuItem(
@@ -273,6 +275,33 @@ fun SongActionMenu(
                 onClick = {
                     onDismiss()
                     onCompress()
+                },
+            )
+        }
+        // Destructive actions sit at the bottom, separated and in the error colour,
+        // so they can never be confused with "edit" or "add to playlist".
+        if (onDelete != null) {
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 4.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+            )
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        text = stringResource(R.string.action_delete_file),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                },
+                onClick = {
+                    onDismiss()
+                    onDelete()
                 },
             )
         }

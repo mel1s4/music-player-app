@@ -64,6 +64,12 @@ class AppSettings(context: Context) {
     var syncToFiles by mutableStateOf(prefs.getBoolean(KEY_SYNC_FILES, true))
         private set
 
+    /** True once the one-time Android 13+ notification prompt has been shown. */
+    var notificationPromptShown by mutableStateOf(
+        prefs.getBoolean(KEY_NOTIFICATION_PROMPT, false),
+    )
+        private set
+
     /** Tree URIs the user has granted, newest last. Stored as strings. */
     var libraries by mutableStateOf(readLibraries())
         private set
@@ -97,6 +103,11 @@ class AppSettings(context: Context) {
     fun updateSyncToFiles(value: Boolean) {
         syncToFiles = value
         prefs.edit().putBoolean(KEY_SYNC_FILES, value).apply()
+    }
+
+    fun markNotificationPromptShown() {
+        notificationPromptShown = true
+        prefs.edit().putBoolean(KEY_NOTIFICATION_PROMPT, true).apply()
     }
 
     fun updateAppIcon(icon: AppIcon) {
@@ -167,6 +178,7 @@ class AppSettings(context: Context) {
         private const val KEY_SCAN_ON_LAUNCH = "scan_on_launch"
         private const val KEY_ALBUM_ART = "album_art"
         private const val KEY_SYNC_FILES = "sync_files"
+        private const val KEY_NOTIFICATION_PROMPT = "notification_prompt_shown"
         private const val KEY_APP_ICON = "app_icon"
         private const val KEY_LIBRARIES = "libraries"
 

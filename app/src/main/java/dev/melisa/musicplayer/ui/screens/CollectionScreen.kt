@@ -59,6 +59,7 @@ fun CollectionScreen(
     onCompress: (Track) -> Unit,
     onLike: (Track) -> Unit,
     onDislike: (Track) -> Unit,
+    onDelete: (Track) -> Unit,
     onEdit: () -> Unit,
 ) {
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -154,6 +155,7 @@ fun CollectionScreen(
                         onCompress = { onCompress(track) },
                         onLike = { onLike(track) },
                         onDislike = { onDislike(track) },
+                        onDelete = { onDelete(track) },
                     )
                 }
             }

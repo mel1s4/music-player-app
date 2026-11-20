@@ -1,11 +1,13 @@
 package dev.melisa.musicplayer.playback
 
+import android.app.PendingIntent
 import android.content.Intent
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import dev.melisa.musicplayer.MainActivity
 
 /**
  * Owns the player for the whole app.
@@ -35,7 +37,21 @@ class PlaybackService : MediaSessionService() {
             .setHandleAudioBecomingNoisy(true)
             .build()
 
-        mediaSession = MediaSession.Builder(this, player).build()
+        // Tapping the notification or the lock-screen controls should land in the app.
+        val openApp = PendingIntent.getActivity(
+            this,
+            0,
+            Intent(this, MainActivity::class.java).apply {
+                action = Intent.ACTION_MAIN
+                addCategory(Intent.CATEGORY_LAUNCHER)
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        mediaSession = MediaSession.Builder(this, player)
+            .setSessionActivity(openApp)
+            .build()
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =

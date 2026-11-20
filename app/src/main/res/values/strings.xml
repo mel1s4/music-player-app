@@ -95,6 +95,9 @@
     <string name="playlist_dynamic_empty">No songs carry this tag yet.</string>
     <string name="action_edit">Edit</string>
     <string name="action_delete">Delete</string>
+    <string name="action_delete_file">Delete file</string>
+    <string name="delete_song_confirm">Delete “%1$s” from the device? The audio file will be removed and this can\'t be undone.</string>
+    <string name="delete_song_failed">Couldn\'t delete that file. It may be read-only or already gone.</string>
     <string name="action_back">Back</string>
     <string name="action_save">Save</string>
     <string name="nav_menu">Menu</string>
@@ -176,6 +179,8 @@
     <string name="recently_added">Recently added</string>
     <string name="settings_sync_files">Update audio files</string>
     <string name="settings_sync_files_desc">Write ratings, favourites and tags into each file’s metadata when they change</string>
+    <string name="settings_notifications">Playback notifications</string>
+    <string name="settings_notifications_desc">Show the current song on the lock screen and in the notification shade</string>
     <string name="rating_score">Score</string>
     <string name="metadata_choose_existing">Choose existing</string>
     <string name="metadata_no_matches">No existing match</string>
@@ -223,6 +228,31 @@
     <string name="compress_error_no_savings">At this bitrate the file would not get smaller. Pick a lower bitrate.</string>
     <string name="compress_error_io">The file couldn\'t be read or written.</string>
     <string name="compress_already_small">This file is already small at these bitrates.</string>
+    <!-- Hear the difference: bitrate comparison helper -->
+    <string name="hear_difference">Hear the difference</string>
+    <string name="hear_difference_hint">Compare how this song sounds at different bitrates before you replace the file.</string>
+    <string name="hear_scope">What to hear</string>
+    <string name="hear_scope_clip">20-second excerpt</string>
+    <string name="hear_scope_full">Full song</string>
+    <string name="hear_scope_clip_hint">From %1$s to %2$s</string>
+    <string name="hear_bitrates">Bitrates to compare</string>
+    <string name="hear_bitrates_hint">Select one or more. Each becomes a version you can play.</string>
+    <string name="hear_bitrate_label">%1$d kbps</string>
+    <string name="hear_start">Start comparison</string>
+    <string name="hear_converting">Converting %1$d kbps…</string>
+    <string name="hear_results">Tap play on each version, then choose the one to keep.</string>
+    <string name="hear_original">Original</string>
+    <string name="hear_keep">Keep this version</string>
+    <string name="hear_keep_bitrate">Save at %1$d kbps</string>
+    <string name="hear_saving">Saving the full song at %1$d kbps…</string>
+    <string name="hear_saved">Saved at %1$d kbps</string>
+    <string name="hear_saved_hint">The original file was replaced, and the library now points at this version.</string>
+    <string name="hear_saved_copy_hint">The new version was saved next to the original, which could not be removed.</string>
+    <string name="hear_change">Change selection</string>
+    <string name="hear_no_bitrates">This file is already small. No lower bitrate would save space.</string>
+    <string name="hear_clip_note">Excerpts are taken from the middle of the song. The version you keep is saved as the full song.</string>
+    <string name="hear_full_note">Every selected bitrate is converted in full, so this can take a while.</string>
+    <string name="hear_preview_failed">%1$d kbps preview failed:</string>
 
     <!-- Storage -->
     <string name="settings_storage">Storage</string>
