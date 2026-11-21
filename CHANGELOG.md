@@ -14,6 +14,17 @@ project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - More library statistics, and a listening-history screen built on the recorded play
   timestamps.
 
+## [0.4.0] - 2026-11-21
+
+### Added
+
+- **No rating** smart list: tracks that are still at the neutral score.
+- **Reorder contents** on a folder in the Files browser: long-press the folder and its
+  songs are moved into `artist/album/` folders from the metadata the scanner already
+  has, or `artist/` when there is no album. Songs without an artist are skipped, songs
+  already in the right folder are left alone, and ratings, tags, favourites, listening
+  history and playlist entries follow the moved files.
+
 ## [0.3.0] - 2026-11-21
 
 ### Added

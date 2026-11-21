@@ -21,7 +21,7 @@ account, no upload, no network permission.
 - **Android 8.0 (API 26) or newer.**
 - The release page includes a **SHA-256 checksum**; verify it before installing.
 - GitHub Releases is the official distribution channel; the latest version is
-  [v0.3.0](https://github.com/mel1s4/music-player-app/releases/tag/v0.3.0).
+  [v0.4.0](https://github.com/mel1s4/music-player-app/releases/tag/v0.4.0).
 - Prefer to build it yourself? See [Build and run](#build-and-run).
 - Already have a debug/test build installed? Uninstall it first — Android will not
   update across different signing keys.
@@ -57,7 +57,9 @@ notes, palette, contrast measurements and motion inventory are in
 - **Albums and artists** collected from track tags, with cover art and per-collection
   pages that open inside the tab (playback controls stay visible).
 - **Files browser** with a scrollable breadcrumb, per-folder song counts, and
-  **starred folders** pinned at the root for quick access.
+  **starred folders** pinned at the root for quick access. Long-press a folder and
+  choose **Reorder contents** to file its songs under `artist/album/` from their tags
+  (songs without an artist are left where they are).
 - **Search** across tracks, albums and artists, with recent queries.
 
 ### Playback
@@ -100,8 +102,8 @@ notes, palette, contrast measurements and motion inventory are in
 - Large text and reduced-motion friendly: animations are state-driven and stop when
   nothing is playing or scanning.
 - Playlists: manual playlists plus dynamic playlists driven by a tag rule.
-- **Smart lists** on the Playlists screen: Liked Songs and Disliked Songs from your
-  ratings, and Unheard songs for tracks you have not played yet.
+- **Smart lists** on the Playlists screen: Liked Songs, Disliked Songs and No rating
+  from your ratings, and Unheard songs for tracks you have not played yet.
 
 ## Screenshots
 
