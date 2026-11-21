@@ -21,7 +21,7 @@ account, no upload, no network permission.
 - **Android 8.0 (API 26) or newer.**
 - The release page includes a **SHA-256 checksum**; verify it before installing.
 - GitHub Releases is the official distribution channel; the latest version is
-  [v0.2.0](https://github.com/mel1s4/music-player-app/releases/tag/v0.2.0).
+  [v0.3.0](https://github.com/mel1s4/music-player-app/releases/tag/v0.3.0).
 - Prefer to build it yourself? See [Build and run](#build-and-run).
 - Already have a debug/test build installed? Uninstall it first — Android will not
   update across different signing keys.
@@ -100,6 +100,8 @@ notes, palette, contrast measurements and motion inventory are in
 - Large text and reduced-motion friendly: animations are state-driven and stop when
   nothing is playing or scanning.
 - Playlists: manual playlists plus dynamic playlists driven by a tag rule.
+- **Smart lists** on the Playlists screen: Liked Songs and Disliked Songs from your
+  ratings, and Unheard songs for tracks you have not played yet.
 
 ## Screenshots
 
@@ -216,8 +218,9 @@ music-player-app/
   only files whose size or modification time changed. Parsed fields are cached in the
   `track_meta` table, which doubles as the launch snapshot.
 - **Persistence** lives in `library.db` (SQLite): favourites, ratings, tags, playlists,
-  first-seen timestamps, the metadata cache and starred folders. The database is
-  migrated forward on upgrade; upgrading from any earlier schema is supported.
+  first-seen timestamps, listening history, the metadata cache and starred folders. The
+  database is migrated forward on upgrade; upgrading from any earlier schema is
+  supported.
 - **Playback** is owned by `PlaybackService`; the UI talks to it through a Media3
   `MediaController`. Audio keeps playing when the activity is gone.
 - **File writes** (tag edits, ratings/favourites sync, renames) are copy → edit →

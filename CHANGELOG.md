@@ -11,7 +11,23 @@ project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Unit tests around scanning, tag read/write and rating weights.
 - More tablet and foldable layouts.
-- Additional library statistics and listening history.
+- More library statistics, and a listening-history screen built on the recorded play
+  timestamps.
+
+## [0.3.0] - 2026-11-21
+
+### Added
+
+- **Smart lists** on the Playlists screen: **Liked Songs** and **Disliked Songs**
+  computed from the signed ratings, and **Unheard songs** for tracks that have not been
+  played yet. A track counts as heard after ten seconds of real playback (or half of a
+  shorter track), so skipping through a list does not mark everything as listened.
+
+### Fixed
+
+- Tapping a song in Songs, Search or a Dashboard list now queues that list in the order
+  it is shown, so playback continues with the next song instead of stopping after the
+  selected one or following a different library order.
 
 ## [0.2.0] - 2026-11-20
 
