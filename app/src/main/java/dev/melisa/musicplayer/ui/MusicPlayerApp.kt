@@ -246,26 +246,47 @@ fun MusicPlayerApp(settings: AppSettings) {
     // Position for both the mini player and the full player, polled while a track exists.
     var positionMs by remember { mutableStateOf(0L) }
     var durationMs by remember { mutableStateOf(0L) }
+    // The track whose play has already been recorded this session. Without it the poll
+    // loop would bump the play counter every half second while a song keeps playing.
+    var heardMarkedUri by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(nowPlaying, controller) {
         while (nowPlaying != null) {
             positionMs = controller?.currentPosition?.coerceAtLeast(0L) ?: 0L
             durationMs = controller?.duration?.takeIf { it > 0L } ?: (nowPlaying?.durationMs ?: 0L)
+            // Listening history feeds the "Unheard songs" smart list. Only real playback
+            // counts, and only after a short stretch, so skipping through a list does not
+            // mark every row as heard.
+            val track = nowPlaying
+            if (track != null && controller?.isPlaying == true &&
+                positionMs >= listenedThresholdMs(track.durationMs)
+            ) {
+                val uri = track.uri.toString()
+                if (heardMarkedUri != uri) {
+                    extras.markListened(uri)
+                    heardMarkedUri = uri
+                }
+            }
             delay(500)
         }
     }
 
     fun play(track: Track, queue: List<Track>? = null, shuffle: Boolean? = null) {
         val player = controller ?: return
-        val base = (queue ?: tracks).orEmpty()
-        if (base.isEmpty()) return
+        // The queue is the list the song was picked from, in the order it is shown,
+        // so the item that follows a song is its next sibling in that list. Never end
+        // up with an empty queue (or one that lost the selected song): that would stop
+        // playback as soon as this one track finished.
+        val base = (queue ?: tracks).orEmpty().ifEmpty { listOf(track) }
 
         val wantShuffle = shuffle ?: shuffleEnabled
         val ordered = if (wantShuffle) {
             listOf(track) + weightedShuffle(base.filter { it.uri != track.uri }) {
                 extras.rating(it.uri.toString())
             }
-        } else {
+        } else if (base.any { it.uri == track.uri }) {
             base
+        } else {
+            listOf(track) + base
         }
 
         val index = ordered.indexOfFirst { it.uri == track.uri }.coerceAtLeast(0)
@@ -747,7 +768,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                             extras = extras,
                             nowPlaying = nowPlaying,
                             isPlaying = isPlaying,
-                            onPlay = { play(it) },
+                            onPlay = { track, queue -> play(track, queue) },
                             onRescan = { refreshToken++ },
                             onFreeSpace = { showFreeSpace = true },
                             onOpenSettings = { navigate(Destination.Settings) },
@@ -759,7 +780,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                             currentTrackUri = nowPlaying?.uri?.toString(),
                             isPlaying = isPlaying,
                             hasLibraries = settings.libraries.isNotEmpty(),
-                            onPlay = { play(it) },
+                            onPlay = { track, queue -> play(track, queue) },
                             onShuffleAll = { shuffleEverything() },
                             onAddToPlaylist = { openAddToPlaylist(it) },
                             onManageTags = { openTags(it) },
@@ -811,7 +832,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                             artists = artistEntries,
                             currentTrackUri = nowPlaying?.uri?.toString(),
                             hasLibraries = settings.libraries.isNotEmpty(),
-                            onPlay = { play(it) },
+                            onPlay = { track, queue -> play(track, queue) },
                             onAddToPlaylist = { openAddToPlaylist(it) },
                             onManageTags = { openTags(it) },
                             onEditMetadata = { editingTrack = it },
@@ -1704,6 +1725,13 @@ private fun rememberPlaybackController(context: Context): MediaController? {
     }
     return controller
 }
+
+/**
+ * How much of a track has to play before it counts as heard: ten seconds, or half of a
+ * track shorter than that. A quick skip still leaves the song in "Unheard songs".
+ */
+private fun listenedThresholdMs(durationMs: Long): Long =
+    if (durationMs <= 0L) 10_000L else minOf(10_000L, durationMs / 2)
 
 /**
  * Queue items carry the song's identity, not just its URI: the notification and the

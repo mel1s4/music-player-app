@@ -88,7 +88,7 @@ fun SearchScreen(
     artists: List<CollectionEntry>,
     currentTrackUri: String?,
     hasLibraries: Boolean,
-    onPlay: (Track) -> Unit,
+    onPlay: (Track, List<Track>) -> Unit,
     onAddToPlaylist: (Track) -> Unit,
     onManageTags: (Track) -> Unit,
     onEditMetadata: (Track) -> Unit,
@@ -245,7 +245,7 @@ private fun Results(
     currentTrackUri: String?,
     onQueryChange: (String) -> Unit,
     onForgetRecent: () -> Unit,
-    onPlay: (Track) -> Unit,
+    onPlay: (Track, List<Track>) -> Unit,
     onAddToPlaylist: (Track) -> Unit,
     onManageTags: (Track) -> Unit,
     onEditMetadata: (Track) -> Unit,
@@ -359,7 +359,9 @@ private fun Results(
                 SongRow(
                     track = track,
                     selected = track.uri.toString() == currentTrackUri,
-                    onClick = { onPlay(track) },
+                    // Play through every match for this query, not the whole library:
+                    // the next song is the next result in the list.
+                    onClick = { onPlay(track, songHits) },
                     onAddToPlaylist = { onAddToPlaylist(track) },
                     onManageTags = { onManageTags(track) },
                     onEditMetadata = { onEditMetadata(track) },

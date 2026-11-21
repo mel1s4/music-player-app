@@ -9,7 +9,7 @@ import java.util.UUID
 
 /**
  * Everything the user layers on top of the scanned library: favourites, ratings, tags,
- * playlists and first-seen stamps.
+ * playlists, first-seen stamps and listening history.
  *
  * Backed by [LibraryStore] (SQLite) instead of a preferences blob, so the lists can grow
  * and are queried by URI. The in-memory Compose state stays the UI's source of truth for
@@ -64,6 +64,13 @@ class LibraryExtras(context: Context) {
      * modification time the first time a URI is seen; rescans never move it.
      */
     var addedAt by mutableStateOf(store.addedAt())
+        private set
+
+    /**
+     * When each track was last heard, in epoch millis. Absent means never played; this
+     * is what the "Unheard songs" smart list filters on.
+     */
+    var listenedAt by mutableStateOf(store.listenedAt())
         private set
 
     fun isFavorite(uri: String): Boolean = favorites.contains(uri)
@@ -150,6 +157,10 @@ class LibraryExtras(context: Context) {
         if (addedAt.containsKey(uri)) {
             addedAt = addedAt - uri
             store.deleteAdded(uri)
+        }
+        if (listenedAt.containsKey(uri)) {
+            listenedAt = listenedAt - uri
+            store.deleteListen(uri)
         }
         val affected = playlists.filter { it.trackUris.contains(uri) }
         if (affected.isNotEmpty()) {
@@ -241,6 +252,7 @@ class LibraryExtras(context: Context) {
         tags = tags[oldUri]?.let { tags - oldUri + (newUri to it) } ?: tags
         addedAt = addedAt[oldUri]?.let { addedAt - oldUri + (newUri to it) } ?: addedAt
         ratings = ratings[oldUri]?.let { ratings - oldUri + (newUri to it) } ?: ratings
+        listenedAt = listenedAt[oldUri]?.let { listenedAt - oldUri + (newUri to it) } ?: listenedAt
         playlists = playlists.map { playlist ->
             if (playlist.trackUris.contains(oldUri)) {
                 playlist.copy(trackUris = playlist.trackUris.map { if (it == oldUri) newUri else it })
@@ -277,9 +289,25 @@ class LibraryExtras(context: Context) {
             addedAt = addedAt + (toUri to stamp)
             store.insertAdded(listOf(toUri to stamp))
         }
+        listenedAt[fromUri]?.let { stamp ->
+            listenedAt = listenedAt + (toUri to stamp)
+            store.copyListen(fromUri, toUri)
+        }
     }
 
     fun addedAt(uri: String): Long? = addedAt[uri]
+
+    /**
+     * Records that [uri] has been heard. The player calls this once a track has actually
+     * been playing for a while, not when a row is tapped, so browsing or quick-skipping
+     * through a list cannot mark songs as heard.
+     */
+    fun markListened(uri: String) {
+        if (uri.isBlank()) return
+        val now = System.currentTimeMillis()
+        listenedAt = listenedAt + (uri to now)
+        store.markListened(uri, now)
+    }
 
     /**
      * Stamps tracks that are new since the last scan. [entries] pairs each URI with the

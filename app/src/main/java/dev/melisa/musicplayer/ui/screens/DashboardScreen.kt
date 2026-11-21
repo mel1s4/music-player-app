@@ -84,7 +84,7 @@ fun DashboardScreen(
     extras: LibraryExtras,
     nowPlaying: Track?,
     isPlaying: Boolean,
-    onPlay: (Track) -> Unit,
+    onPlay: (Track, List<Track>) -> Unit,
     onRescan: () -> Unit,
     onFreeSpace: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -159,7 +159,8 @@ fun DashboardScreen(
                                     track = track,
                                     addedAt = extras.addedAt(track.uri.toString()) ?: 0L,
                                     playing = isPlaying && nowPlaying?.uri == track.uri,
-                                    onClick = { onPlay(track) },
+                                    // Play the rest of "Recently added", in this order.
+                                    onClick = { onPlay(track, recent) },
                                 )
                                 if (index != recent.lastIndex) {
                                     CyberDivider(modifier = Modifier.padding(start = 16.dp, end = 16.dp))
@@ -189,7 +190,7 @@ fun DashboardScreen(
                                     track = track,
                                     score = score(track),
                                     accent = MaterialTheme.colorScheme.primary,
-                                    onClick = { onPlay(track) },
+                                    onClick = { onPlay(track, liked) },
                                 )
                                 if (index != liked.lastIndex) {
                                     CyberDivider(modifier = Modifier.padding(start = 16.dp, end = 16.dp))
@@ -247,7 +248,7 @@ fun DashboardScreen(
                                         val id = track.uri.toString()
                                         selected = if (isChecked) selected + id else selected - id
                                     },
-                                    onClick = { onPlay(track) },
+                                    onClick = { onPlay(track, disliked) },
                                 )
                                 if (index != disliked.lastIndex) {
                                     CyberDivider(modifier = Modifier.padding(start = 16.dp, end = 16.dp))

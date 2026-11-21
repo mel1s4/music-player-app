@@ -171,6 +171,13 @@
     <string name="playlists_empty_body">Créez une liste pour regrouper vos titres comme vous les écoutez.</string>
     <string name="search_results">Résultats</string>
     <string name="tags_empty_hint">Ajoutez une étiquette depuis le menu ⋮ d\'un titre : elle apparaîtra ici, prête à être lue.</string>
+    <string name="smart_lists">Listes intelligentes</string>
+    <string name="smart_liked">Morceaux aimés</string>
+    <string name="smart_disliked">Morceaux détestés</string>
+    <string name="smart_unheard">Morceaux non écoutés</string>
+    <string name="smart_liked_empty">Aucun morceau aimé pour l’instant. Touchez le pouce vers le haut d’un morceau pour le voir ici.</string>
+    <string name="smart_disliked_empty">Aucun morceau détesté pour l’instant. Touchez le pouce vers le bas d’un morceau pour le voir ici.</string>
+    <string name="smart_unheard_empty">Vous avez écouté tous les morceaux de votre bibliothèque.</string>
     <string name="recently_added">Ajouté récemment</string>
     <string name="settings_sync_files">Mettre à jour les fichiers audio</string>
     <string name="settings_sync_files_desc">Écrit les notes, favoris et étiquettes dans les métadonnées du fichier lorsqu’ils changent</string>

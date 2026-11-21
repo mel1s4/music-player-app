@@ -171,6 +171,13 @@
     <string name="playlists_empty_body">Crea una lista para agrupar canciones a tu manera.</string>
     <string name="search_results">Resultados</string>
     <string name="tags_empty_hint">Etiqueta una canción desde su menú ⋮ y la etiqueta aparecerá aquí, lista para reproducir.</string>
+    <string name="smart_lists">Listas inteligentes</string>
+    <string name="smart_liked">Canciones que te gustan</string>
+    <string name="smart_disliked">Canciones que no te gustan</string>
+    <string name="smart_unheard">Canciones sin escuchar</string>
+    <string name="smart_liked_empty">Aún no te gusta ninguna. Pulsa el pulgar arriba en una canción y aparecerá aquí.</string>
+    <string name="smart_disliked_empty">Aún no has descartado ninguna. Pulsa el pulgar abajo en una canción y aparecerá aquí.</string>
+    <string name="smart_unheard_empty">Ya has escuchado todas las canciones de tu biblioteca.</string>
     <string name="recently_added">Añadido recientemente</string>
     <string name="settings_sync_files">Actualizar archivos de audio</string>
     <string name="settings_sync_files_desc">Escribe valoraciones, favoritos y etiquetas en los metadatos del archivo cuando cambian</string>

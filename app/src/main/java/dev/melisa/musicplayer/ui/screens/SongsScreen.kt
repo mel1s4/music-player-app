@@ -86,7 +86,7 @@ fun SongsScreen(
     currentTrackUri: String?,
     isPlaying: Boolean,
     hasLibraries: Boolean,
-    onPlay: (Track) -> Unit,
+    onPlay: (Track, List<Track>) -> Unit,
     onShuffleAll: () -> Unit,
     onAddToPlaylist: (Track) -> Unit,
     onManageTags: (Track) -> Unit,
@@ -137,6 +137,13 @@ fun SongsScreen(
         }
     }
     val letters = sections.map { it.label }
+
+    // The rows in exactly the order they appear on screen: section by section for the
+    // alphabetical sorts, the plain sorted list for date / duration. Tapping a song
+    // queues this list, so the next song played is the row directly below that song.
+    val displayOrder = remember(sorted, sections) {
+        if (sections.isEmpty()) sorted else sections.flatMap { it.tracks }
+    }
 
     // Item index of each section header: two fixed header rows come first, then every
     // section contributes its header plus its songs.
@@ -277,7 +284,7 @@ fun SongsScreen(
                             track = track,
                             selected = track.uri.toString() == currentTrackUri,
                             isPlaying = isPlaying,
-                            onClick = { onPlay(track) },
+                            onClick = { onPlay(track, displayOrder) },
                             onAddToPlaylist = { onAddToPlaylist(track) },
                             onManageTags = { onManageTags(track) },
                             onEditMetadata = { onEditMetadata(track) },
@@ -298,7 +305,7 @@ fun SongsScreen(
                                 track = track,
                                 selected = track.uri.toString() == currentTrackUri,
                                 isPlaying = isPlaying,
-                                onClick = { onPlay(track) },
+                                onClick = { onPlay(track, displayOrder) },
                                 onAddToPlaylist = { onAddToPlaylist(track) },
                                 onManageTags = { onManageTags(track) },
                                 onEditMetadata = { onEditMetadata(track) },

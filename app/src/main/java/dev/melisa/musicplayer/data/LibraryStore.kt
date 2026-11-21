@@ -9,7 +9,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * The app's own database: favourites, ratings, tags, playlists and first-seen stamps.
+ * The app's own database: favourites, ratings, tags, playlists, first-seen stamps and
+ * listening history.
  *
  * It lives in SQLite rather than SharedPreferences because these are relational lists
  * that grow with the library and are queried/filtered constantly (tags by URI, tracks
@@ -51,6 +52,16 @@ class LibraryStore(context: Context) : TrackMetaCache {
 
     fun addedAt(): Map<String, Long> = buildMap {
         db.query("tracks", arrayOf("uri", "added_at"), null, null, null, null, null).use { c ->
+            while (c.moveToNext()) put(c.getString(0), c.getLong(1))
+        }
+    }
+
+    /**
+     * When each track was last heard, in epoch millis. A URI with no row has never been
+     * played, which is exactly what the "Unheard songs" smart list asks for.
+     */
+    fun listenedAt(): Map<String, Long> = buildMap {
+        db.query("listens", arrayOf("uri", "last_played"), null, null, null, null, null).use { c ->
             while (c.moveToNext()) put(c.getString(0), c.getLong(1))
         }
     }
@@ -303,6 +314,35 @@ class LibraryStore(context: Context) : TrackMetaCache {
         db.delete("tracks", "uri = ?", arrayOf(uri))
     }
 
+    /**
+     * Records one play. The counter is incremented in SQL rather than read-modify-written
+     * in Kotlin, so a play recorded while the UI is rebuilding cannot be lost.
+     *
+     * UPSERT syntax needs SQLite 3.24 (Android 9), while the app supports Android 8, so
+     * the increment is expressed as an INSERT ... SELECT with a fallback of 1.
+     */
+    fun markListened(uri: String, at: Long) {
+        db.execSQL(
+            "INSERT OR REPLACE INTO listens (uri, plays, last_played) " +
+                "SELECT ?, COALESCE((SELECT plays + 1 FROM listens WHERE uri = ?), 1), ?",
+            arrayOf<Any>(uri, uri, at),
+        )
+    }
+
+    /** Forgets the listening history of a file that no longer exists. */
+    fun deleteListen(uri: String) {
+        db.delete("listens", "uri = ?", arrayOf(uri))
+    }
+
+    /** Carries a play count over to a copy of the same song (compression, keep both). */
+    fun copyListen(fromUri: String, toUri: String) {
+        db.execSQL(
+            "INSERT OR IGNORE INTO listens (uri, plays, last_played) " +
+                "SELECT ?, plays, last_played FROM listens WHERE uri = ?",
+            arrayOf(toUri, fromUri),
+        )
+    }
+
     // ------------------------------------------------------------- playlists
 
     fun insertPlaylist(playlist: Playlist) {
@@ -382,7 +422,7 @@ class LibraryStore(context: Context) : TrackMetaCache {
      */
     fun rekey(oldUri: String, newUri: String) {
         if (oldUri == newUri) return
-        val tables = listOf("favorites", "ratings", "tags", "playlist_tracks", "tracks")
+        val tables = listOf("favorites", "ratings", "tags", "playlist_tracks", "tracks", "listens")
         db.beginTransaction()
         try {
             tables.forEach { table ->
@@ -423,6 +463,7 @@ class LibraryStore(context: Context) : TrackMetaCache {
             db.execSQL("CREATE TABLE tracks (uri TEXT PRIMARY KEY NOT NULL, added_at INTEGER NOT NULL)")
             createTrackMeta(db)
             createStarredFolders(db)
+            createListens(db)
             db.execSQL("CREATE INDEX tags_uri ON tags(uri)")
             db.execSQL("CREATE INDEX playlist_tracks_list ON playlist_tracks(playlist_id)")
             migrateFromPreferences(db)
@@ -441,6 +482,17 @@ class LibraryStore(context: Context) : TrackMetaCache {
             if (oldVersion < 4) {
                 createStarredFolders(db)
             }
+            if (oldVersion < 5) {
+                createListens(db)
+            }
+        }
+
+        private fun createListens(db: SQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS listens (" +
+                    "uri TEXT PRIMARY KEY NOT NULL, plays INTEGER NOT NULL, " +
+                    "last_played INTEGER NOT NULL)",
+            )
         }
 
         private fun createStarredFolders(db: SQLiteDatabase) {
@@ -573,6 +625,6 @@ class LibraryStore(context: Context) : TrackMetaCache {
 
     private companion object {
         const val DB_NAME = "library.db"
-        const val DB_VERSION = 4
+        const val DB_VERSION = 5
     }
 }

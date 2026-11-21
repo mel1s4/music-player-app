@@ -93,6 +93,15 @@
     <string name="playlist_remove_track">Remove from playlist</string>
     <string name="playlist_empty">This playlist is empty.</string>
     <string name="playlist_dynamic_empty">No songs carry this tag yet.</string>
+
+    <!-- Smart lists: built-in dynamic playlists -->
+    <string name="smart_lists">Smart lists</string>
+    <string name="smart_liked">Liked Songs</string>
+    <string name="smart_disliked">Disliked Songs</string>
+    <string name="smart_unheard">Unheard songs</string>
+    <string name="smart_liked_empty">No liked songs yet. Thumbs-up a song and it will appear here.</string>
+    <string name="smart_disliked_empty">No disliked songs yet. Thumbs-down a song and it will appear here.</string>
+    <string name="smart_unheard_empty">Every song in your library has been heard.</string>
     <string name="action_edit">Edit</string>
     <string name="action_delete">Delete</string>
     <string name="action_delete_file">Delete file</string>

@@ -278,6 +278,12 @@ that state is false; no decorative animation runs forever on a static screen.
   portrait show a monogram disc.
 - Playlists get a tinted "New playlist" action tile and real cards; empty playlists show
   a proper empty state.
+- **Smart lists** sit directly under that tile: Liked Songs (score above neutral),
+  Disliked Songs (score below neutral) and Unheard songs (no listening-history row).
+  They are queries, not stored playlists, so liking a song or playing it moves it in or
+  out of the list immediately. Each one opens the same page as a playlist — header,
+  Play all / Shuffle and the song rows — but without edit, delete or per-row remove,
+  because there is no stored membership to change.
 - The Listas screen now lists **every tag** as a tinted `#tag` pill with its live song
   count. Tapping a pill **plays every song carrying that tag** and opens the tag's queue
   (with Play all / Shuffle and the song list), so a tag is a one-tap mix, not a filter.
@@ -347,10 +353,13 @@ Library data lives in its own SQLite database, `library.db`, through
 | `playlists` | playlist id, name, optional dynamic tag rule |
 | `playlist_tracks` | ordered URIs per playlist |
 | `tracks` | first-seen timestamp per URI ("Recently added") |
+| `listens` | play count and last-played timestamp per URI ("Unheard songs") |
 | `starred_folders` | File Explorer folder paths pinned by the user |
 
 `LibraryExtras` keeps its existing public API and mirrors the database into Compose
-state, writing through on every mutation, so screens did not need to change. On first
+state, writing through on every mutation, so screens did not need to change. Listening
+history is recorded from the player's position poll once a track has played for ten
+seconds (or half of a shorter track); a tap that is immediately skipped is not a listen. On first
 run the database is created and the old `extras` preferences blob is imported in one
 transaction (favourites, ratings, tags, playlists, first-seen stamps); the old file is
 left untouched as a backup. Renames now move ratings as well — previously they were
