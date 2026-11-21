@@ -10,7 +10,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.LocalIndication
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.Composable
@@ -68,6 +68,7 @@ object Motion {
 fun Modifier.cyberClick(
     enabled: Boolean = true,
     pressedScale: Float = 0.96f,
+    onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ): Modifier {
     val interaction = remember { MutableInteractionSource() }
@@ -82,10 +83,11 @@ fun Modifier.cyberClick(
             scaleX = scale
             scaleY = scale
         }
-        .clickable(
+        .combinedClickable(
             interactionSource = interaction,
             indication = LocalIndication.current,
             enabled = enabled,
+            onLongClick = onLongClick,
             onClick = onClick,
         )
 }

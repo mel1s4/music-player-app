@@ -255,6 +255,12 @@ that state is false; no decorative animation runs forever on a static screen.
   it never appears twice, while deeper stars carry their full path as a subtitle to
   disambiguate same-named folders. Stars are stored by path, resolved against the live
   tree on every draw, so a folder that was moved or deleted simply drops out.
+- Long-pressing a folder opens a small menu with **Reorder contents**. It uses the
+  scanned metadata and moves each song into `artist/album/` (or `artist/` when the
+  album is missing), keeping the file name. Songs without an artist stay put, and files
+  already in the expected folder are skipped. Every move re-keys the database and the
+  playback queue, so ratings, tags, favourites, listening history, playlist entries and
+  the current playback position survive the new path.
 - In the metadata editor, the artist and album fields keep free text and open a
   height-capped, scrollable autocomplete panel while typing. Exact and prefix matches
   come first, and a brand-new name is always allowed.
@@ -279,8 +285,9 @@ that state is false; no decorative animation runs forever on a static screen.
 - Playlists get a tinted "New playlist" action tile and real cards; empty playlists show
   a proper empty state.
 - **Smart lists** sit directly under that tile: Liked Songs (score above neutral),
-  Disliked Songs (score below neutral) and Unheard songs (no listening-history row).
-  They are queries, not stored playlists, so liking a song or playing it moves it in or
+  Disliked Songs (score below neutral), No rating (still exactly neutral) and Unheard
+  songs (no listening-history row).
+  They are queries, not stored playlists, so rating a song or playing it moves it in or
   out of the list immediately. Each one opens the same page as a playlist — header,
   Play all / Shuffle and the song rows — but without edit, delete or per-row remove,
   because there is no stored membership to change.

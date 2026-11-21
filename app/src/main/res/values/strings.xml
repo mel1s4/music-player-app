@@ -98,9 +98,11 @@
     <string name="smart_lists">Smart lists</string>
     <string name="smart_liked">Liked Songs</string>
     <string name="smart_disliked">Disliked Songs</string>
+    <string name="smart_no_rating">No rating</string>
     <string name="smart_unheard">Unheard songs</string>
     <string name="smart_liked_empty">No liked songs yet. Thumbs-up a song and it will appear here.</string>
     <string name="smart_disliked_empty">No disliked songs yet. Thumbs-down a song and it will appear here.</string>
+    <string name="smart_no_rating_empty">Every song has a rating.</string>
     <string name="smart_unheard_empty">Every song in your library has been heard.</string>
     <string name="action_edit">Edit</string>
     <string name="action_delete">Delete</string>
@@ -137,6 +139,22 @@
     <string name="files_unstar">Unstar folder</string>
     <string name="files_empty">No files here.</string>
     <string name="files_up">Up one level</string>
+
+    <!-- Folder reorder -->
+    <string name="reorder_contents">Reorder contents</string>
+    <string name="reorder_running_title">Reordering contents</string>
+    <string name="reorder_running_body">Moving songs into artist and album folders…</string>
+    <string name="reorder_progress">%1$d of %2$d · %3$s</string>
+    <string name="reorder_done_title">Reordering finished</string>
+    <string name="reorder_already">Already in place: %1$d</string>
+    <string name="reorder_missing_artist">Skipped without artist: %1$d</string>
+    <string name="reorder_failed">Couldn\'t move: %1$d</string>
+    <string name="reorder_error">This folder can\'t be written to. Check that the library was added with write access.</string>
+    <string name="reorder_empty">No songs found in this folder.</string>
+    <plurals name="reorder_moved">
+        <item quantity="one">Moved %d song</item>
+        <item quantity="other">Moved %d songs</item>
+    </plurals>
     <string name="metadata_instant">Saved immediately</string>
     <string name="action_like">Like</string>
     <string name="action_dislike">Dislike</string>

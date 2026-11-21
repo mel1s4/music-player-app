@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Label
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.ThumbDown
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.Button
@@ -641,6 +642,7 @@ private fun CollectionLinkRow(
 private fun smartTitle(list: SmartPlaylist): Int = when (list) {
     SmartPlaylist.Liked -> R.string.smart_liked
     SmartPlaylist.Disliked -> R.string.smart_disliked
+    SmartPlaylist.NoRating -> R.string.smart_no_rating
     SmartPlaylist.Unheard -> R.string.smart_unheard
 }
 
@@ -648,12 +650,14 @@ private fun smartTitle(list: SmartPlaylist): Int = when (list) {
 private fun smartEmptyText(list: SmartPlaylist): Int = when (list) {
     SmartPlaylist.Liked -> R.string.smart_liked_empty
     SmartPlaylist.Disliked -> R.string.smart_disliked_empty
+    SmartPlaylist.NoRating -> R.string.smart_no_rating_empty
     SmartPlaylist.Unheard -> R.string.smart_unheard_empty
 }
 
 private fun smartIcon(list: SmartPlaylist): ImageVector = when (list) {
     SmartPlaylist.Liked -> Icons.Filled.ThumbUp
     SmartPlaylist.Disliked -> Icons.Filled.ThumbDown
+    SmartPlaylist.NoRating -> Icons.Filled.StarBorder
     SmartPlaylist.Unheard -> Icons.Filled.Hearing
 }
 
@@ -661,6 +665,7 @@ private fun smartIcon(list: SmartPlaylist): ImageVector = when (list) {
 private fun smartAccent(list: SmartPlaylist): Color = when (list) {
     SmartPlaylist.Liked -> MaterialTheme.colorScheme.primary
     SmartPlaylist.Disliked -> MaterialTheme.colorScheme.error
+    SmartPlaylist.NoRating -> MaterialTheme.colorScheme.secondary
     SmartPlaylist.Unheard -> MaterialTheme.colorScheme.tertiary
 }
 

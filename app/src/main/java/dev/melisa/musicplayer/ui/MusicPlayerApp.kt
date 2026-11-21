@@ -102,9 +102,12 @@ import dev.melisa.musicplayer.data.AudioFileDetails
 import dev.melisa.musicplayer.data.CompressAudio
 import dev.melisa.musicplayer.data.CompressFailure
 import dev.melisa.musicplayer.data.CompressOutcome
+import dev.melisa.musicplayer.data.FolderReorder
 import dev.melisa.musicplayer.data.HoldingHand
 import dev.melisa.musicplayer.data.LibraryExtras
+import dev.melisa.musicplayer.data.MovedTrack
 import dev.melisa.musicplayer.data.MusicLibrary
+import dev.melisa.musicplayer.data.ReorderError
 import dev.melisa.musicplayer.data.SongArt
 import dev.melisa.musicplayer.data.SongFileSync
 import dev.melisa.musicplayer.data.Track
@@ -120,6 +123,8 @@ import dev.melisa.musicplayer.ui.components.ManageTagsDialog
 import dev.melisa.musicplayer.ui.components.NeonPanel
 import dev.melisa.musicplayer.ui.components.NewPlaylistDialog
 import dev.melisa.musicplayer.ui.components.PlayPauseGlyph
+import dev.melisa.musicplayer.ui.components.ReorderDialog
+import dev.melisa.musicplayer.ui.components.ReorderUiState
 import dev.melisa.musicplayer.ui.components.SectionKicker
 import dev.melisa.musicplayer.ui.components.ScanningRail
 import dev.melisa.musicplayer.ui.components.SongCover
@@ -399,6 +404,12 @@ fun MusicPlayerApp(settings: AppSettings) {
     val compressScope = rememberCoroutineScope()
     val deleteScope = rememberCoroutineScope()
 
+    // Folder reordering is a batch too; the dialog lives above the tabs so switching
+    // screens cannot hide a running move.
+    var reorderState by remember { mutableStateOf<ReorderUiState?>(null) }
+    val reorderScope = rememberCoroutineScope()
+    val mainHandler = remember { android.os.Handler(android.os.Looper.getMainLooper()) }
+
     /**
      * A top-level destination change closes whatever album/artist page was open on top
      * of the old tab. Without this the new tab renders underneath the old page and the
@@ -512,6 +523,100 @@ fun MusicPlayerApp(settings: AppSettings) {
             android.util.Log.w(TAG, "could not reopen playing item", result.exceptionOrNull())
         }
         if (nowPlaying?.uri == oldUri) nowPlaying = nowPlaying?.copy(uri = newUri)
+    }
+
+    /**
+     * Moves the app's bookkeeping with files that a folder reorder relocated. SAF changes
+     * the document URI, so ratings, tags, favourites, history, first-seen stamps and
+     * playlists have to follow, and any queued copy of the song needs its new address.
+     */
+    fun applyMovedTrack(moved: MovedTrack) {
+        val oldUri = moved.oldUri
+        val newUri = moved.newUri
+        if (oldUri == newUri) return
+
+        extras.rekey(oldUri.toString(), newUri.toString())
+
+        val player = controller
+        if (nowPlaying?.uri == oldUri) {
+            // Reopening keeps the current position instead of restarting the song.
+            val position = player?.currentPosition?.coerceAtLeast(0L) ?: positionMs
+            reopenPlayingTrack(oldUri, newUri, position, isPlaying)
+            nowPlaying = nowPlaying?.copy(uri = newUri)
+        } else if (player != null) {
+            val index = (0 until player.mediaItemCount).firstOrNull { i ->
+                player.getMediaItemAt(i).mediaId == oldUri.toString()
+            }
+            if (index != null) {
+                runCatching {
+                    player.replaceMediaItem(
+                        index,
+                        player.getMediaItemAt(index).buildUpon()
+                            .setUri(newUri)
+                            .setMediaId(newUri.toString())
+                            .build(),
+                    )
+                }
+            }
+        }
+        if (editingTrack?.uri == oldUri) editingTrack = editingTrack?.copy(uri = newUri)
+    }
+
+    /** Reorganises one folder as artist/album/song, then tracks the new URIs. */
+    fun startReorderFolder(folderPath: String, folderTracks: List<Track>) {
+        if (reorderState?.running == true) return
+        val name = folderPath.trim('/').substringAfterLast('/').ifBlank { folderPath }
+        if (folderTracks.isEmpty()) {
+            // The empty result still gets a dialog; "No songs found" is the message.
+            reorderState = ReorderUiState(folderName = name)
+            return
+        }
+
+        // Same reasoning as compression: a queued tag write copies and rewrites a whole
+        // file. Do not let it race a move; the database stays correct either way.
+        SongFileSync.cancelPending()
+
+        reorderState = ReorderUiState(
+            folderName = name,
+            running = true,
+            total = folderTracks.size,
+        )
+        reorderScope.launch {
+            try {
+                val outcome = FolderReorder.reorder(
+                    context = context,
+                    folderPath = folderPath,
+                    tracks = folderTracks,
+                    onMoved = { moved -> mainHandler.post { applyMovedTrack(moved) } },
+                    onProgress = { completed, total, title ->
+                        reorderState = reorderState?.copy(
+                            total = total,
+                            completed = completed,
+                            currentTitle = title,
+                        )
+                    },
+                )
+
+                reorderState = ReorderUiState(
+                    folderName = name,
+                    total = folderTracks.size,
+                    completed = folderTracks.size,
+                    moved = outcome.moved.size,
+                    alreadySorted = outcome.alreadySorted,
+                    missingArtist = outcome.missingArtist,
+                    failed = outcome.failed,
+                    error = outcome.error == ReorderError.FolderNotWritable,
+                )
+                if (outcome.moved.isNotEmpty()) refreshToken++
+            } catch (c: CancellationException) {
+                throw c
+            } catch (t: Throwable) {
+                android.util.Log.w(TAG, "folder reorder failed", t)
+                // Some files may already have moved; re-key those and rescan.
+                reorderState = ReorderUiState(folderName = name, error = true)
+                refreshToken++
+            }
+        }
     }
 
     // The database writes ratings / favourites / tags back into the audio file on a
@@ -677,7 +782,8 @@ fun MusicPlayerApp(settings: AppSettings) {
             !showNowPlaying &&
             editingTrack == null &&
             !showFreeSpace &&
-            compressTracks == null,
+            compressTracks == null &&
+            reorderState == null,
     ) {
         navigate(if (current == Destination.Search) searchReturn else Destination.Dashboard)
     }
@@ -799,6 +905,9 @@ fun MusicPlayerApp(settings: AppSettings) {
                             hasLibraries = settings.libraries.isNotEmpty(),
                             starredFolders = extras.starredFolders,
                             onToggleFolderStar = { extras.toggleFolderStarred(it) },
+                            onReorderFolder = { path, folderTracks ->
+                                startReorderFolder(path, folderTracks)
+                            },
                             onPlay = { track, queue -> play(track, queue) },
                             onAddToPlaylist = { openAddToPlaylist(it) },
                             onManageTags = { openTags(it) },
@@ -1182,6 +1291,13 @@ fun MusicPlayerApp(settings: AppSettings) {
                     startCompression(bitrateKbps, keepOriginal)
                 },
                 onCancel = { compressJob?.cancel() },
+            )
+        }
+
+        reorderState?.let { state ->
+            ReorderDialog(
+                state = state,
+                onDismiss = { reorderState = null },
             )
         }
     }

@@ -26,6 +26,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +43,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -69,6 +73,7 @@ fun FilesScreen(
     hasLibraries: Boolean,
     starredFolders: Set<String>,
     onToggleFolderStar: (String) -> Unit,
+    onReorderFolder: (String, List<Track>) -> Unit,
     onPlay: (Track, List<Track>) -> Unit,
     onAddToPlaylist: (Track) -> Unit,
     onManageTags: (Track) -> Unit,
@@ -151,6 +156,9 @@ fun FilesScreen(
                                     subtitle = starredPath.takeIf { it.contains('/') },
                                     onClick = { onPathChange(starredNode.path) },
                                     onToggleStar = { onToggleFolderStar(starredPath) },
+                                    onReorder = {
+                                        onReorderFolder(starredNode.path, starredNode.allTracks())
+                                    },
                                 )
                             }
                             if (listedFolders.isNotEmpty()) {
@@ -169,6 +177,9 @@ fun FilesScreen(
                                 starred = folder.path in starredFolders,
                                 onClick = { onPathChange(folder.path) },
                                 onToggleStar = { onToggleFolderStar(folder.path) },
+                                onReorder = {
+                                    onReorderFolder(folder.path, folder.allTracks())
+                                },
                             )
                         }
                         items(folderTracks, key = { it.uri.toString() }) { track ->
@@ -373,63 +384,88 @@ private fun FolderRow(
     starred: Boolean,
     onClick: () -> Unit,
     onToggleStar: () -> Unit,
+    onReorder: () -> Unit,
     subtitle: String? = null,
 ) {
     val accent = if (starred) Cyber.Amber else MaterialTheme.colorScheme.secondary
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 72.dp)
-            .cyberClick(onClick = onClick)
-            .padding(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
+    val haptics = LocalHapticFeedback.current
+    var menuOpen by remember { mutableStateOf(false) }
+
+    Box {
+        Row(
             modifier = Modifier
-                .size(44.dp)
-                .clip(RoundedCornerShape(13.dp))
-                .background(accent.copy(alpha = 0.12f)),
-            contentAlignment = Alignment.Center,
+                .fillMaxWidth()
+                .heightIn(min = 72.dp)
+                .cyberClick(
+                    onClick = onClick,
+                    onLongClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        menuOpen = true
+                    },
+                )
+                .padding(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(13.dp))
+                    .background(accent.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Folder,
+                    contentDescription = null,
+                    modifier = Modifier.size(21.dp),
+                    tint = accent,
+                )
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = subtitle ?: pluralStringResource(R.plurals.song_count, count, count),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            IconButton(onClick = onToggleStar, modifier = Modifier.size(48.dp)) {
+                Icon(
+                    imageVector = if (starred) Icons.Filled.Star else Icons.Filled.StarBorder,
+                    contentDescription = stringResource(
+                        if (starred) R.string.files_unstar else R.string.files_star,
+                    ),
+                    tint = if (starred) Cyber.Amber else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
             Icon(
-                imageVector = Icons.Filled.Folder,
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                modifier = Modifier.size(21.dp),
-                tint = accent,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Spacer(Modifier.width(14.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = name,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = subtitle ?: pluralStringResource(R.plurals.song_count, count, count),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+
+        DropdownMenu(
+            expanded = menuOpen,
+            onDismissRequest = { menuOpen = false },
+        ) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.reorder_contents)) },
+                onClick = {
+                    menuOpen = false
+                    onReorder()
+                },
             )
         }
-        IconButton(onClick = onToggleStar, modifier = Modifier.size(48.dp)) {
-            Icon(
-                imageVector = if (starred) Icons.Filled.Star else Icons.Filled.StarBorder,
-                contentDescription = stringResource(
-                    if (starred) R.string.files_unstar else R.string.files_star,
-                ),
-                tint = if (starred) Cyber.Amber else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(22.dp),
-            )
-        }
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 

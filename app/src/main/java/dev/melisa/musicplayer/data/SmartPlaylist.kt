@@ -14,6 +14,9 @@ enum class SmartPlaylist {
     /** Tracks rated below neutral. */
     Disliked,
 
+    /** Tracks that are still at the neutral score. */
+    NoRating,
+
     /** Tracks that have never been heard long enough to count as played. */
     Unheard;
 
@@ -39,6 +42,12 @@ enum class SmartPlaylist {
             Disliked -> tracks
                 .filter { score(it) < LibraryExtras.DEFAULT_RATING }
                 .sortedWith(compareBy<Track> { score(it) }.thenBy { it.title.lowercase() })
+
+            // Neutral is the app's "not rated" state, whether the row is absent or was
+            // written back to 0 by undoing a like/dislike.
+            NoRating -> tracks
+                .filter { score(it) == LibraryExtras.DEFAULT_RATING }
+                .sortedBy { it.title.lowercase() }
 
             Unheard -> tracks
                 .filterNot { listenedAt.containsKey(it.uri.toString()) }

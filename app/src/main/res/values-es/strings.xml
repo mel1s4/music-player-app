@@ -123,6 +123,21 @@
     <string name="files_unstar">Quitar de destacadas</string>
     <string name="files_empty">No hay archivos aquí.</string>
     <string name="files_up">Subir un nivel</string>
+    <string name="reorder_contents">Reordenar contenido</string>
+    <string name="reorder_running_title">Reordenando contenido</string>
+    <string name="reorder_running_body">Moviendo canciones a carpetas de artista y álbum…</string>
+    <string name="reorder_progress">%1$d de %2$d · %3$s</string>
+    <string name="reorder_done_title">Reordenación terminada</string>
+    <string name="reorder_already">Ya estaban en su sitio: %1$d</string>
+    <string name="reorder_missing_artist">Omitidas sin artista: %1$d</string>
+    <string name="reorder_failed">No se pudieron mover: %1$d</string>
+    <string name="reorder_error">No se puede escribir en esta carpeta. Comprueba que la biblioteca se añadió con permiso de escritura.</string>
+    <string name="reorder_empty">No se encontraron canciones en esta carpeta.</string>
+    <plurals name="reorder_moved">
+        <item quantity="one">Se movió %d canción</item>
+        <item quantity="many">Se movieron %d canciones</item>
+        <item quantity="other">Se movieron %d canciones</item>
+    </plurals>
     <string name="metadata_instant">Se guarda al instante</string>
     <string name="action_like">Me gusta</string>
     <string name="action_dislike">No me gusta</string>
@@ -174,9 +189,11 @@
     <string name="smart_lists">Listas inteligentes</string>
     <string name="smart_liked">Canciones que te gustan</string>
     <string name="smart_disliked">Canciones que no te gustan</string>
+    <string name="smart_no_rating">Sin valoración</string>
     <string name="smart_unheard">Canciones sin escuchar</string>
     <string name="smart_liked_empty">Aún no te gusta ninguna. Pulsa el pulgar arriba en una canción y aparecerá aquí.</string>
     <string name="smart_disliked_empty">Aún no has descartado ninguna. Pulsa el pulgar abajo en una canción y aparecerá aquí.</string>
+    <string name="smart_no_rating_empty">Todas las canciones tienen valoración.</string>
     <string name="smart_unheard_empty">Ya has escuchado todas las canciones de tu biblioteca.</string>
     <string name="recently_added">Añadido recientemente</string>
     <string name="settings_sync_files">Actualizar archivos de audio</string>

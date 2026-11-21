@@ -123,6 +123,21 @@
     <string name="files_unstar">Retirer des favoris</string>
     <string name="files_empty">Aucun fichier ici.</string>
     <string name="files_up">Remonter d\'un niveau</string>
+    <string name="reorder_contents">Réorganiser le contenu</string>
+    <string name="reorder_running_title">Réorganisation du contenu</string>
+    <string name="reorder_running_body">Déplacement des morceaux vers les dossiers artiste et album…</string>
+    <string name="reorder_progress">%1$d sur %2$d · %3$s</string>
+    <string name="reorder_done_title">Réorganisation terminée</string>
+    <string name="reorder_already">Déjà à leur place : %1$d</string>
+    <string name="reorder_missing_artist">Ignorés sans artiste : %1$d</string>
+    <string name="reorder_failed">Déplacement impossible : %1$d</string>
+    <string name="reorder_error">Impossible d’écrire dans ce dossier. Vérifiez que la bibliothèque a été ajoutée avec l’accès en écriture.</string>
+    <string name="reorder_empty">Aucun morceau trouvé dans ce dossier.</string>
+    <plurals name="reorder_moved">
+        <item quantity="one">%d morceau déplacé</item>
+        <item quantity="many">%d morceaux déplacés</item>
+        <item quantity="other">%d morceaux déplacés</item>
+    </plurals>
     <string name="metadata_instant">Enregistré immédiatement</string>
     <string name="action_like">J\'aime</string>
     <string name="action_dislike">Je n\'aime pas</string>
@@ -174,9 +189,11 @@
     <string name="smart_lists">Listes intelligentes</string>
     <string name="smart_liked">Morceaux aimés</string>
     <string name="smart_disliked">Morceaux détestés</string>
+    <string name="smart_no_rating">Sans note</string>
     <string name="smart_unheard">Morceaux non écoutés</string>
     <string name="smart_liked_empty">Aucun morceau aimé pour l’instant. Touchez le pouce vers le haut d’un morceau pour le voir ici.</string>
     <string name="smart_disliked_empty">Aucun morceau détesté pour l’instant. Touchez le pouce vers le bas d’un morceau pour le voir ici.</string>
+    <string name="smart_no_rating_empty">Tous les morceaux ont une note.</string>
     <string name="smart_unheard_empty">Vous avez écouté tous les morceaux de votre bibliothèque.</string>
     <string name="recently_added">Ajouté récemment</string>
     <string name="settings_sync_files">Mettre à jour les fichiers audio</string>

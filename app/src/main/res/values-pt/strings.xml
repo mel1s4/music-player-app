@@ -123,6 +123,21 @@
     <string name="files_unstar">Remover dos destaques</string>
     <string name="files_empty">Nenhum arquivo aqui.</string>
     <string name="files_up">Subir um nível</string>
+    <string name="reorder_contents">Reordenar conteúdo</string>
+    <string name="reorder_running_title">Reordenando conteúdo</string>
+    <string name="reorder_running_body">Movendo músicas para pastas de artista e álbum…</string>
+    <string name="reorder_progress">%1$d de %2$d · %3$s</string>
+    <string name="reorder_done_title">Reordenação concluída</string>
+    <string name="reorder_already">Já estavam no lugar: %1$d</string>
+    <string name="reorder_missing_artist">Ignoradas sem artista: %1$d</string>
+    <string name="reorder_failed">Não foi possível mover: %1$d</string>
+    <string name="reorder_error">Não é possível gravar nesta pasta. Verifique se a biblioteca foi adicionada com permissão de escrita.</string>
+    <string name="reorder_empty">Nenhuma música encontrada nesta pasta.</string>
+    <plurals name="reorder_moved">
+        <item quantity="one">%d música movida</item>
+        <item quantity="many">%d músicas movidas</item>
+        <item quantity="other">%d músicas movidas</item>
+    </plurals>
     <string name="metadata_instant">Salvo na hora</string>
     <string name="action_like">Curtir</string>
     <string name="action_dislike">Não curtir</string>
@@ -174,9 +189,11 @@
     <string name="smart_lists">Listas inteligentes</string>
     <string name="smart_liked">Músicas curtidas</string>
     <string name="smart_disliked">Músicas não curtidas</string>
+    <string name="smart_no_rating">Sem avaliação</string>
     <string name="smart_unheard">Músicas não ouvidas</string>
     <string name="smart_liked_empty">Nenhuma música curtida ainda. Toque no polegar para cima de uma música para vê-la aqui.</string>
     <string name="smart_disliked_empty">Nenhuma música não curtida ainda. Toque no polegar para baixo de uma música para vê-la aqui.</string>
+    <string name="smart_no_rating_empty">Todas as músicas têm avaliação.</string>
     <string name="smart_unheard_empty">Você já ouviu todas as músicas da sua biblioteca.</string>
     <string name="recently_added">Adicionado recentemente</string>
     <string name="settings_sync_files">Atualizar arquivos de áudio</string>
