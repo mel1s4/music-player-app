@@ -14,6 +14,35 @@ project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - More library statistics, and a listening-history screen built on the recorded play
   timestamps.
 
+## [0.5.0] - 2026-11-22
+
+### Added
+
+- **Waveform seek bar** on the Now Playing screen: the progress control is now the
+  song's loudness envelope, with the played side highlighted and a playhead. Tap or drag
+  anywhere on it to seek. Long tracks are sampled in short windows and envelopes are
+  cached in memory, so the control stays responsive.
+- **Delete** and **Compress audio** shortcuts on the Now Playing screen for songs with a
+  negative score. Delete opens the existing file-deletion confirmation; Compress opens
+  the bitrate picker for the current song. Both disappear again at neutral or positive
+  scores.
+
+### Changed
+
+- Metadata edits to the currently playing song are now **deferred**: the app shows the
+  new values immediately, but rewrites the file (and applies an optional rename) only
+  after the track is paused, replaced, or the app is reopened. This removes the audible
+  gaps caused by rewriting a file while the player is reading it.
+- The Dashboard now opens with a **Songs / Files / Albums / Artists** browse grid, and
+  the **Your library** summary moved from the Dashboard to the top of the Songs page.
+- The Now Playing rating panel now sits directly under the header, above the artwork,
+  instead of below the transport. For disliked songs, Delete and Compress audio stay
+  directly above it.
+- **Reorder contents** now files a folder's songs at the root of the Music Library that
+  contains it, even when the folder is nested. A staging folder such as `Downloads`
+  merges into the library's existing artist/album tree instead of building a second
+  tree inside itself.
+
 ## [0.4.0] - 2026-11-21
 
 ### Added

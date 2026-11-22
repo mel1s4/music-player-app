@@ -21,7 +21,7 @@ account, no upload, no network permission.
 - **Android 8.0 (API 26) or newer.**
 - The release page includes a **SHA-256 checksum**; verify it before installing.
 - GitHub Releases is the official distribution channel; the latest version is
-  [v0.4.0](https://github.com/mel1s4/music-player-app/releases/tag/v0.4.0).
+  [v0.5.0](https://github.com/mel1s4/music-player-app/releases/tag/v0.5.0).
 - Prefer to build it yourself? See [Build and run](#build-and-run).
 - Already have a debug/test build installed? Uninstall it first — Android will not
   update across different signing keys.
@@ -45,21 +45,22 @@ notes, palette, contrast measurements and motion inventory are in
 
 - **Multiple library folders** picked through the Storage Access Framework. No broad
   storage permission and no access to anything you did not explicitly grant.
-- **Dashboard** with library counts, recently added tracks, most liked/disliked lists,
-  and one-tap **Rescan** / **Free up space** actions.
+- **Dashboard** as a browse hub: Songs, Files, Albums and Artists entries, recently
+  added tracks, and most liked/disliked lists.
 - **Fast launches** — the last completed scan is painted immediately from the local
   metadata cache while a fresh scan runs behind it. A slim top-bar sweep shows the
   refresh; your library stays usable.
 - **Incremental scanning** — file metadata is cached by URI, size and modification time,
   so only new or edited files are reopened. Deleted files are pruned from the cache.
-- **Songs view** with date added / title / artist / duration sorting (date added is the
-  default), an alphabet rail, and a count badge.
+- **Songs view** with the library summary at the top (song count, storage, hours,
+  **Rescan** / **Free up space**), date added / title / artist / duration sorting
+  (date added is the default), an alphabet rail, and a count badge.
 - **Albums and artists** collected from track tags, with cover art and per-collection
   pages that open inside the tab (playback controls stay visible).
 - **Files browser** with a scrollable breadcrumb, per-folder song counts, and
   **starred folders** pinned at the root for quick access. Long-press a folder and
-  choose **Reorder contents** to file its songs under `artist/album/` from their tags
-  (songs without an artist are left where they are).
+  choose **Reorder contents** to file its songs under `artist/album/` at the root of
+  the containing Music Library (songs without an artist are left where they are).
 - **Search** across tracks, albums and artists, with recent queries.
 
 ### Playback
@@ -72,7 +73,12 @@ notes, palette, contrast measurements and motion inventory are in
 - **Weighted shuffle** that uses signed ratings: liked tracks are more likely, disliked
   ones less likely.
 - Pause when headphones are unplugged and proper audio-focus handling.
-- Persistent mini player and a full Now Playing screen.
+- Persistent mini player and a full Now Playing screen. The rating thumbs sit at the
+  top of the player, above the artwork.
+- The Now Playing progress control is a **waveform** of the song's real loudness, so
+  quiet and loud sections are visible; tap or drag anywhere on it to seek.
+- A disliked now-playing song (score below `0`) shows **Delete** and **Compress audio**
+  actions above the thumbs, opening the existing confirmation and bitrate picker.
 - Swipe the **cover art** left/right to move to the next/previous track.
 - Swipe **down** on the Now Playing header or artwork to hide it, or **up** to open the
   song editor.
@@ -88,6 +94,9 @@ notes, palette, contrast measurements and motion inventory are in
   audio file's own metadata, so they survive a reinstall and travel to other players.
 - Rename files, edit title/artist/album/year/track/disc/genre/comment, and manage
   artwork. The Save action stays pinned above the keyboard while the form scrolls.
+- If the edited song is playing, the new metadata appears immediately but the file is
+  written only once playback pauses or moves to another track, so the audio never
+  stutters while the file is rewritten.
 - **Hear the difference**: audition a 20-second excerpt or the full song at several
   bitrates, then keep the version that sounds right. The chosen bitrate is saved as the
   full song.
@@ -220,9 +229,9 @@ music-player-app/
   only files whose size or modification time changed. Parsed fields are cached in the
   `track_meta` table, which doubles as the launch snapshot.
 - **Persistence** lives in `library.db` (SQLite): favourites, ratings, tags, playlists,
-  first-seen timestamps, listening history, the metadata cache and starred folders. The
-  database is migrated forward on upgrade; upgrading from any earlier schema is
-  supported.
+  first-seen timestamps, listening history, pending metadata edits, the metadata cache
+  and starred folders. The database is migrated forward on upgrade; upgrading from any
+  earlier schema is supported.
 - **Playback** is owned by `PlaybackService`; the UI talks to it through a Media3
   `MediaController`. Audio keeps playing when the activity is gone.
 - **File writes** (tag edits, ratings/favourites sync, renames) are copy → edit →
