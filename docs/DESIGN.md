@@ -155,9 +155,9 @@ that state is false; no decorative animation runs forever on a static screen.
 - Persistent mini player with artwork, title, live equalizer, progress LED bar, play and
   next — controls mirror to the holding hand (`Left` / `Right` in Settings).
 - The progress control is a **waveform**, not a line: rounded bars show the RMS loudness
-  of the decoded audio (72 buckets), with a vertical playhead and time labels. It sits on
-  the lower edge of the cover art behind a dark scrim, in white so it reads over any
-  artwork. Tap or drag anywhere on the bars to seek. Long tracks are sampled in 72 short windows so the envelope
+  of the decoded audio (72 buckets), with a vertical playhead and time labels. It sits
+  above the cover art in the vertical flow, full width, so the timeline reads as its own
+  section. Tap or drag anywhere on the bars to seek. Long tracks are sampled in 72 short windows so the envelope
   arrives quickly; short tracks decode in full, results stay in an in-memory cache, and
   a quiet placeholder keeps the control usable while analysis runs.
 - Swipe the mini player up to open the player. Inside it, swipe **down** on the header
@@ -230,10 +230,13 @@ that state is false; no decorative animation runs forever on a static screen.
 - Bottom bar mirrors with the holding hand. Right-handed: **Home, Playlists, Songs,
   Menu**; left-handed: **Menu, Songs, Playlists, Home**. Playlists replaced Search,
   which is a utility, not a destination people return to.
-- Search now lives in the top bar, the drawer, and a pull-down overlay. Dragging down
-  at the top of a scrollable page uncovers Search from the top with progress tied to the
-  finger; releasing past 30% commits, otherwise it springs back. On the search screen
-  the top-bar slot becomes a close button and returns to the page underneath.
+- Search now lives in the top bar, the drawer, and a pull-down overlay. A downward pull
+  that begins at the top first shows a compact search cue with a progress line. The
+  Search page starts to reveal only after a preview threshold, and releasing past the
+  commit threshold opens it; shorter pulls spring back. A gesture that started while the
+  page was scrolled is ignored when it reaches the top, so ordinary upward scrolling
+  never turns into a search. On the search screen the top-bar slot becomes a close
+  button and returns to the page underneath.
 - Drawer opens from the side of the holding hand, marked with a live dot.
 - Back from any side tab returns to Home instead of quitting the app; back from Search
   returns to the page underneath it.

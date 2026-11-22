@@ -27,6 +27,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -177,6 +178,8 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 private const val TAG = "MusicPlayerApp"
+private const val SEARCH_PULL_PREVIEW = 0.55f
+private const val SEARCH_PULL_COMMIT = 0.7f
 
 @Composable
 fun MusicPlayerApp(settings: AppSettings) {
@@ -185,6 +188,7 @@ fun MusicPlayerApp(settings: AppSettings) {
     // Search is an overlay, not a tab. It can be pulled down from the top of any
     // scrolled page; the top bar's magnifier opens it with the same animation.
     var searchProgress by remember { mutableFloatStateOf(0f) }
+    var searchPull by remember { mutableFloatStateOf(0f) }
     var searchOpen by remember { mutableStateOf(false) }
     var searchAnimJob by remember { mutableStateOf<Job?>(null) }
     val searchScope = rememberCoroutineScope()
@@ -497,24 +501,31 @@ fun MusicPlayerApp(settings: AppSettings) {
         }
     }
 
+    fun revealForPull(pull: Float): Float =
+        ((pull - SEARCH_PULL_PREVIEW) / (1f - SEARCH_PULL_PREVIEW)).coerceIn(0f, 1f)
+
     fun openSearch() {
         if (searchOpen && searchProgress >= 1f) return
+        searchPull = 0f
         searchOpen = true
         animateSearchTo(1f)
     }
 
     fun closeSearch() {
         if (!searchOpen && searchProgress <= 0f) return
+        searchPull = 0f
         searchOpen = false
         animateSearchTo(0f)
     }
 
     fun commitSearchPull() {
+        searchPull = 1f
         searchOpen = true
         animateSearchTo(1f)
     }
 
     fun cancelSearchPull() {
+        searchPull = 0f
         animateSearchTo(0f)
     }
 
@@ -522,6 +533,7 @@ fun MusicPlayerApp(settings: AppSettings) {
         searchAnimJob?.cancel()
         searchOpen = false
         searchProgress = 0f
+        searchPull = 0f
     }
 
     fun navigate(destination: Destination) {
@@ -1209,7 +1221,7 @@ fun MusicPlayerApp(settings: AppSettings) {
         navigate(Destination.Dashboard)
     }
 
-    val searchThresholdPx = with(LocalDensity.current) { 150.dp.toPx() }
+    val searchThresholdPx = with(LocalDensity.current) { 210.dp.toPx() }
     val searchPullEnabled = !searchOpen &&
         !drawerOpen &&
         !showNowPlaying &&
@@ -1218,15 +1230,19 @@ fun MusicPlayerApp(settings: AppSettings) {
         compressTracks == null &&
         reorderState == null &&
         !songSelection.active
+    // A gesture that has scrolled the list cannot turn into a search pull when it reaches
+    // the top. Only a fresh pull that begins at the top is allowed to start the cue.
+    val searchGestureScrolled = remember { booleanArrayOf(false) }
     val searchNestedScroll = remember(searchPullEnabled, searchThresholdPx) {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (searchProgress <= 0f || available.y >= 0f) return Offset.Zero
+                if (searchPull <= 0f || available.y >= 0f) return Offset.Zero
                 searchAnimJob?.cancel()
-                val next = (searchProgress + available.y / searchThresholdPx)
+                val next = (searchPull + available.y / searchThresholdPx)
                     .coerceAtLeast(0f)
-                val consumed = (next - searchProgress) * searchThresholdPx
-                searchProgress = next
+                val consumed = (next - searchPull) * searchThresholdPx
+                searchPull = next
+                searchProgress = revealForPull(next)
                 return Offset(0f, consumed)
             }
 
@@ -1235,14 +1251,18 @@ fun MusicPlayerApp(settings: AppSettings) {
                 available: Offset,
                 source: NestedScrollSource,
             ): Offset {
-                if (!searchPullEnabled || searchOpen || available.y <= 0f) {
+                if (!searchPullEnabled || searchOpen) return Offset.Zero
+                if (consumed.y != 0f || available.y < 0f) {
+                    searchGestureScrolled[0] = true
                     return Offset.Zero
                 }
+                if (searchGestureScrolled[0] || available.y <= 0f) return Offset.Zero
                 searchAnimJob?.cancel()
-                val next = (searchProgress + available.y / searchThresholdPx)
+                val next = (searchPull + available.y / searchThresholdPx)
                     .coerceAtMost(1f)
-                val consumed = (next - searchProgress) * searchThresholdPx
-                searchProgress = next
+                val consumed = (next - searchPull) * searchThresholdPx
+                searchPull = next
+                searchProgress = revealForPull(next)
                 return Offset(0f, consumed)
             }
 
@@ -1250,13 +1270,14 @@ fun MusicPlayerApp(settings: AppSettings) {
                 consumed: Velocity,
                 available: Velocity,
             ): Velocity {
-                if (searchProgress > 0f) {
-                    if (searchProgress >= 0.3f || available.y > 900f) {
+                if (searchPull > 0f) {
+                    if (searchPull >= SEARCH_PULL_COMMIT || available.y > 1200f) {
                         commitSearchPull()
                     } else {
                         cancelSearchPull()
                     }
                 }
+                searchGestureScrolled[0] = false
                 return Velocity.Zero
             }
         }
@@ -1556,6 +1577,13 @@ fun MusicPlayerApp(settings: AppSettings) {
                             autoFocus = searchOpen,
                         )
                     }
+                }
+
+                if (!searchOpen && searchPull > 0.08f) {
+                    SearchPullCue(
+                        progress = (searchPull / SEARCH_PULL_COMMIT).coerceIn(0f, 1f),
+                        release = searchPull >= SEARCH_PULL_COMMIT,
+                    )
                 }
             }
         }
@@ -2145,6 +2173,73 @@ private fun <T : Any> PageOverlay(
 }
 
 /** Header: menu, contextual readout, and a live indicator while audio runs. */
+/**
+ * The pre-search half of the pull gesture: a compact search bar slides in and fills as
+ * the user pulls, then gives way to the real Search overlay once the preview threshold
+ * is crossed.
+ */
+@Composable
+private fun SearchPullCue(progress: Float, release: Boolean) {
+    val fill = progress.coerceIn(0f, 1f)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .zIndex(20f),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(top = 10.dp)
+                .width((220 + 90 * fill).dp)
+                .graphicsLayer {
+                    alpha = (fill * 3f).coerceIn(0f, 1f)
+                    translationY = (1f - fill) * -8.dp.toPx()
+                }
+                .clip(RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.97f))
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
+                    shape = RoundedCornerShape(50),
+                )
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Filled.Search,
+                    contentDescription = null,
+                    modifier = Modifier.size(17.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = stringResource(
+                        if (release) R.string.search_pull_release else R.string.search_pull_hint,
+                    ),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                )
+            }
+            Spacer(Modifier.height(7.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(2.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(fill)
+                        .height(2.dp)
+                        .background(MaterialTheme.colorScheme.primary),
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun CyberTopBar(
     title: String,

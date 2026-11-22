@@ -424,7 +424,40 @@ fun NowPlayingScreen(
                         )
                 }
 
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(6.dp))
+
+                // The timeline sits before the artwork in the vertical flow, not
+                // layered on top of it.
+                WaveformSeekBar(
+                    progress = sliderValue,
+                    amplitudes = waveform,
+                    onScrub = { scrub = it },
+                    onSeek = { fraction ->
+                        onSeek((fraction * total).toLong())
+                        scrub = null
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    height = 56.dp,
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = formatTime(shownPosition),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = formatTime(durationMs),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                Spacer(Modifier.height(18.dp))
 
                 BoxWithConstraints(
                     modifier = Modifier.fillMaxWidth(),
@@ -492,69 +525,18 @@ fun NowPlayingScreen(
                             alpha = (-swipeProgress).coerceIn(0f, 1f),
                             modifier = Modifier.align(Alignment.CenterEnd),
                         )
-                        Box(
-                            modifier = Modifier
-                                .size(side)
-                                .graphicsLayer {
-                                    translationX = swipeX.value
-                                    rotationZ = (swipeX.value / coverWidthPx) * 6f
-                                    val scale = 1f - 0.04f * abs(swipeProgress)
-                                    scaleX = scale
-                                    scaleY = scale
-                                }
-                                .clip(RoundedCornerShape(side * 0.28f)),
-                        ) {
-                            SongCover(
-                                track = track,
-                                side = side,
-                                playing = false,
-                            )
-                            // The scrubber sits on the artwork; a dark scrim keeps
-                            // the white waveform readable over any cover.
-                            Column(
-                                modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .fillMaxWidth()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            listOf(
-                                                Color.Transparent,
-                                                Color.Black.copy(alpha = 0.78f),
-                                            ),
-                                        ),
-                                    )
-                                    .padding(start = 30.dp, end = 30.dp, top = 24.dp, bottom = 30.dp),
-                            ) {
-                                WaveformSeekBar(
-                                    progress = sliderValue,
-                                    amplitudes = waveform,
-                                    onScrub = { scrub = it },
-                                    onSeek = { fraction ->
-                                        onSeek((fraction * total).toLong())
-                                        scrub = null
-                                    },
-                                    height = 42.dp,
-                                    playedColor = Color.White,
-                                    restColor = Color.White.copy(alpha = 0.38f),
-                                    centerLineColor = Color.White.copy(alpha = 0.22f),
-                                )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                ) {
-                                    Text(
-                                        text = formatTime(shownPosition),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = Color.White,
-                                    )
-                                    Text(
-                                        text = formatTime(durationMs),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = Color.White.copy(alpha = 0.7f),
-                                    )
-                                }
-                            }
-                        }
+                        SongCover(
+                            track = track,
+                            side = side,
+                            playing = false,
+                            modifier = Modifier.graphicsLayer {
+                                translationX = swipeX.value
+                                rotationZ = (swipeX.value / coverWidthPx) * 6f
+                                val scale = 1f - 0.04f * abs(swipeProgress)
+                                scaleX = scale
+                                scaleY = scale
+                            },
+                        )
                     }
                 }
 

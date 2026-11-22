@@ -256,6 +256,8 @@
     <string name="rating_disliked">Disliked</string>
     <string name="image_pick_failed">Couldn\'t save that image.</string>
     <string name="nav_search">Search</string>
+    <string name="search_pull_hint">Pull down to search</string>
+    <string name="search_pull_release">Release to search</string>
     <string name="search_hint">Songs, albums or artists</string>
     <string name="search_all">All</string>
     <string name="search_no_results">Nothing matches “%1$s”.</string>

@@ -21,7 +21,7 @@ account, no upload, no network permission.
 - **Android 8.0 (API 26) or newer.**
 - The release page includes a **SHA-256 checksum**; verify it before installing.
 - GitHub Releases is the official distribution channel; the latest version is
-  [v0.6.0](https://github.com/mel1s4/music-player-app/releases/tag/v0.6.0).
+  [v0.6.1](https://github.com/mel1s4/music-player-app/releases/tag/v0.6.1).
 - Prefer to build it yourself? See [Build and run](#build-and-run).
 - Already have a debug/test build installed? Uninstall it first — Android will not
   update across different signing keys.
@@ -70,9 +70,9 @@ notes, palette, contrast measurements and motion inventory are in
   artist are left where they are); Move places the folder inside another folder of the
   same library; Explode moves its contents to the parent and deletes the folder if
   nothing is left.
-- **Search** across tracks, albums and artists, with recent queries. Pull down at the
-  top of any scrollable page to reveal it with a finger-linked animation, or use the
-  top-bar magnifier.
+- **Search** across tracks, albums and artists, with recent queries. A deliberate pull
+  down from the top first shows a progress cue, then reveals Search after a preview
+  threshold; releasing commits. The top-bar magnifier opens it directly.
 - **Long-press bulk selection** on any song row: set the artist or album, add or remove
   tags, add the whole selection to a playlist, or compress/delete it after confirmation.
 
@@ -89,9 +89,9 @@ notes, palette, contrast measurements and motion inventory are in
 - Persistent mini player and a full Now Playing screen. The rating thumbs sit at the
   top of the player, above the artwork.
 - The Now Playing progress control is a **waveform** of the song's real loudness,
-  overlaid on the cover art; quiet and loud sections are visible, and tapping or
-  dragging it seeks. The rating controls sit directly on the page without a panel
-  background.
+  placed above the cover art in the vertical layout; quiet and loud sections are
+  visible, with elapsed and total time, and tapping or dragging it seeks. The rating
+  controls sit directly on the page without a panel background.
 - A disliked now-playing song (score below `0`) shows **Delete** and **Compress audio**
   actions above the thumbs, opening the existing confirmation and bitrate picker.
 - Swipe the **cover art** left/right to move to the next/previous track.

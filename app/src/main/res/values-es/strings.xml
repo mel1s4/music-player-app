@@ -249,6 +249,8 @@
     <string name="rating_disliked">No te gusta</string>
     <string name="image_pick_failed">No se pudo guardar esa imagen.</string>
     <string name="nav_search">Buscar</string>
+    <string name="search_pull_hint">Desliza para buscar</string>
+    <string name="search_pull_release">Suelta para buscar</string>
     <string name="search_hint">Canciones, álbumes o artistas</string>
     <string name="search_all">Todo</string>
     <string name="search_no_results">Nada coincide con «%1$s».</string>

@@ -249,6 +249,8 @@
     <string name="rating_disliked">Pas aimé</string>
     <string name="image_pick_failed">Impossible d\'enregistrer cette image.</string>
     <string name="nav_search">Rechercher</string>
+    <string name="search_pull_hint">Tirez pour rechercher</string>
+    <string name="search_pull_release">Relâchez pour rechercher</string>
     <string name="search_hint">Morceaux, albums ou artistes</string>
     <string name="search_all">Tout</string>
     <string name="search_no_results">Rien ne correspond à « %1$s ».</string>

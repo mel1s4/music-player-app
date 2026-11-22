@@ -249,6 +249,8 @@
     <string name="rating_disliked">Não curtida</string>
     <string name="image_pick_failed">Não foi possível salvar essa imagem.</string>
     <string name="nav_search">Pesquisar</string>
+    <string name="search_pull_hint">Puxe para pesquisar</string>
+    <string name="search_pull_release">Solte para pesquisar</string>
     <string name="search_hint">Músicas, álbuns ou artistas</string>
     <string name="search_all">Tudo</string>
     <string name="search_no_results">Nada corresponde a “%1$s”.</string>

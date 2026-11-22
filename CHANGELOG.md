@@ -14,6 +14,17 @@ project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - More library statistics, and a listening-history screen built on the recorded play
   timestamps.
 
+## [0.6.1] - 2026-11-22
+
+### Changed
+
+- The pull-to-search gesture now starts with a compact search cue and progress line. The
+  Search page only appears after a preview threshold, and release-to-open requires a
+  larger threshold. Gestures that scrolled the list to the top no longer turn into a
+  search; only a fresh pull that begins at the top activates it.
+- The Now Playing timeline now sits above the cover art in the vertical layout instead
+  of being overlaid on the artwork.
+
 ## [0.6.0] - 2026-11-22
 
 This release turns the library into a more complete browsing and editing workspace:
@@ -198,6 +209,11 @@ The first public release.
   snapshot.
 - A failed scan no longer leaves the list stuck in a permanent scanning state.
 
-[Unreleased]: https://github.com/mel1s4/music-player-app/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/mel1s4/music-player-app/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/mel1s4/music-player-app/compare/v0.6.0...v0.6.1
+[0.6.0]: https://github.com/mel1s4/music-player-app/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/mel1s4/music-player-app/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/mel1s4/music-player-app/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/mel1s4/music-player-app/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/mel1s4/music-player-app/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/mel1s4/music-player-app/releases/tag/v0.1.0
