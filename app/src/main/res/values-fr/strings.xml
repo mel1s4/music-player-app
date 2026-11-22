@@ -27,6 +27,7 @@
     <string name="settings_theme">Thème</string>
     <string name="theme_light">Clair</string>
     <string name="theme_dark">Sombre</string>
+    <string name="theme_system">Système</string>
     <string name="settings_language">Langue</string>
     <string name="settings_holding_hand">Main dominante</string>
     <string name="settings_holding_hand_hint">Place les commandes du côté où vous tenez le téléphone.</string>
@@ -53,6 +54,7 @@
     <string name="min_android_value">Android 8.0 (API 26)</string>
     <string name="songs_no_library_title">Aucune bibliothèque</string>
     <string name="songs_no_library_body">Ajoutez un dossier dans Réglages pour commencer.</string>
+    <string name="scanning_short">Analyse…</string>
     <string name="songs_scanning">Analyse de vos dossiers…</string>
     <string name="action_play">Lire</string>
     <string name="action_pause">Pause</string>
@@ -73,6 +75,7 @@
     <string name="action_create">Créer</string>
     <string name="action_cancel">Annuler</string>
     <string name="tags_title">Étiquettes</string>
+    <string name="tags_frequent">Fréquemment utilisées</string>
     <string name="tags_empty">Aucune étiquette.</string>
     <string name="tags_hint">Ajouter une étiquette</string>
     <string name="action_add">Ajouter</string>
@@ -118,12 +121,68 @@
     <string name="metadata_rename_failed">Impossible de renommer le fichier.</string>
     <string name="nav_files">Fichiers</string>
     <string name="files_all">Tous les dossiers</string>
+    <string name="collections_star">Ajouter aux favoris</string>
+    <string name="collections_unstar">Retirer des favoris</string>
+    <string name="collections_starred">Favoris</string>
     <string name="files_starred">Favoris</string>
     <string name="files_folders">Dossiers</string>
     <string name="files_star">Ajouter aux favoris</string>
     <string name="files_unstar">Retirer des favoris</string>
     <string name="files_empty">Aucun fichier ici.</string>
     <string name="files_up">Remonter d\'un niveau</string>
+    <!-- Bulk song selection -->
+    <string name="bulk_clear">Effacer la sélection</string>
+    <string name="bulk_set_artist">Définir l’artiste</string>
+    <string name="bulk_set_album">Définir l’album</string>
+    <string name="bulk_set_tags">Définir les étiquettes</string>
+    <string name="bulk_set_artist_title">Définir l’artiste</string>
+    <string name="bulk_set_album_title">Définir l’album</string>
+    <string name="bulk_tags_empty">Aucune étiquette n’est commune à tous les morceaux sélectionnés.</string>
+    <string name="bulk_updating_title">Mise à jour des morceaux</string>
+    <string name="bulk_updating_progress">%1$d sur %2$d</string>
+    <string name="bulk_result_title">Action groupée</string>
+    <string name="action_continue">Continuer</string>
+    <plurals name="bulk_selected">
+        <item quantity="one">%d sélectionné</item>
+        <item quantity="many">%d sélectionnés</item>
+        <item quantity="other">%d sélectionnés</item>
+    </plurals>
+    <plurals name="bulk_apply_to">
+        <item quantity="one">%d morceau concerné</item>
+        <item quantity="many">%d morceaux concernés</item>
+        <item quantity="other">%d morceaux concernés</item>
+    </plurals>
+    <plurals name="bulk_tags_title">
+        <item quantity="one">Étiquettes de %d morceau</item>
+        <item quantity="many">Étiquettes de %d morceaux</item>
+        <item quantity="other">Étiquettes de %d morceaux</item>
+    </plurals>
+    <plurals name="bulk_tags_note">
+        <item quantity="one">Les modifications s’appliquent à %d morceau sélectionné.</item>
+        <item quantity="many">Les modifications s’appliquent aux %d morceaux sélectionnés.</item>
+        <item quantity="other">Les modifications s’appliquent aux %d morceaux sélectionnés.</item>
+    </plurals>
+    <plurals name="bulk_compress_confirm">
+        <item quantity="one">Choisir un débit pour %d morceau ? L’original est conservé jusqu’à la vérification du nouveau fichier.</item>
+        <item quantity="many">Choisir un débit pour ces %d morceaux ? Les originaux sont conservés jusqu’à la vérification de chaque nouveau fichier.</item>
+        <item quantity="other">Choisir un débit pour ces %d morceaux ? Les originaux sont conservés jusqu’à la vérification de chaque nouveau fichier.</item>
+    </plurals>
+    <plurals name="bulk_delete_confirm">
+        <item quantity="one">Supprimer %d fichier de l’appareil ? Action irréversible.</item>
+        <item quantity="many">Supprimer ces %d fichiers de l’appareil ? Action irréversible.</item>
+        <item quantity="other">Supprimer ces %d fichiers de l’appareil ? Action irréversible.</item>
+    </plurals>
+    <plurals name="bulk_metadata_failed">
+        <item quantity="one">Impossible de mettre à jour %d morceau. Il est peut-être en lecture seule.</item>
+        <item quantity="many">Impossible de mettre à jour %d morceaux. Ils sont peut-être en lecture seule.</item>
+        <item quantity="other">Impossible de mettre à jour %d morceaux. Ils sont peut-être en lecture seule.</item>
+    </plurals>
+    <plurals name="bulk_delete_failed">
+        <item quantity="one">Impossible de supprimer %d fichier.</item>
+        <item quantity="many">Impossible de supprimer %d fichiers.</item>
+        <item quantity="other">Impossible de supprimer %d fichiers.</item>
+    </plurals>
+
     <string name="reorder_contents">Réorganiser le contenu</string>
     <string name="reorder_running_title">Réorganisation du contenu</string>
     <string name="reorder_running_body">Déplacement des morceaux vers les dossiers artiste et album…</string>
@@ -138,6 +197,29 @@
         <item quantity="one">%d morceau déplacé</item>
         <item quantity="many">%d morceaux déplacés</item>
         <item quantity="other">%d morceaux déplacés</item>
+    </plurals>
+    <string name="files_folder_actions">Actions du dossier</string>
+    <string name="reorder_track">Réorganiser le morceau</string>
+    <string name="folder_move">Déplacer</string>
+    <string name="folder_move_title">Déplacer « %1$s »</string>
+    <string name="folder_move_none">Aucun autre dossier de cette bibliothèque ne peut l’accueillir.</string>
+    <string name="folder_move_running">Déplacement du dossier…</string>
+    <string name="folder_explode">Éclater</string>
+    <string name="folder_explode_title">Éclater le dossier</string>
+    <string name="folder_explode_confirm">Déplacer tout le contenu de « %1$s » vers le dossier parent, puis supprimer « %1$s » s’il ne reste rien ? Les éléments portant le même nom sont laissés en place.</string>
+    <string name="folder_explode_running">Déplacement du contenu hors du dossier…</string>
+    <string name="folder_op_failed">Impossible de terminer cette action. Le dossier est peut-être en lecture seule ou la destination n’est pas accessible en écriture.</string>
+    <string name="folder_explode_partial">%1$s. %2$s ; le dossier a donc été conservé.</string>
+    <string name="folder_explode_undeleted">%1$s, mais le dossier n’a pas pu être supprimé.</string>
+    <plurals name="folder_items_moved">
+        <item quantity="one">%d élément déplacé</item>
+        <item quantity="many">%d éléments déplacés</item>
+        <item quantity="other">%d éléments déplacés</item>
+    </plurals>
+    <plurals name="folder_items_blocked">
+        <item quantity="one">%d élément n’a pas pu être déplacé</item>
+        <item quantity="many">%d éléments n’ont pas pu être déplacés</item>
+        <item quantity="other">%d éléments n’ont pas pu être déplacés</item>
     </plurals>
     <string name="metadata_instant">Enregistré immédiatement</string>
     <string name="action_like">J\'aime</string>

@@ -21,7 +21,7 @@ account, no upload, no network permission.
 - **Android 8.0 (API 26) or newer.**
 - The release page includes a **SHA-256 checksum**; verify it before installing.
 - GitHub Releases is the official distribution channel; the latest version is
-  [v0.5.0](https://github.com/mel1s4/music-player-app/releases/tag/v0.5.0).
+  [v0.6.0](https://github.com/mel1s4/music-player-app/releases/tag/v0.6.0).
 - Prefer to build it yourself? See [Build and run](#build-and-run).
 - Already have a debug/test build installed? Uninstall it first — Android will not
   update across different signing keys.
@@ -48,8 +48,8 @@ notes, palette, contrast measurements and motion inventory are in
 - **Dashboard** as a browse hub: Songs, Files, Albums and Artists entries, recently
   added tracks, and most liked/disliked lists.
 - **Fast launches** — the last completed scan is painted immediately from the local
-  metadata cache while a fresh scan runs behind it. A slim top-bar sweep shows the
-  refresh; your library stays usable.
+  metadata cache while a fresh scan runs behind it. The Songs summary's **Rescan**
+  button shows a spinner and disables itself during the refresh; your library stays usable.
 - **Incremental scanning** — file metadata is cached by URI, size and modification time,
   so only new or edited files are reopened. Deleted files are pruned from the cache.
 - **Songs view** with the library summary at the top (song count, storage, hours,
@@ -57,11 +57,24 @@ notes, palette, contrast measurements and motion inventory are in
   (date added is the default), an alphabet rail, and a count badge.
 - **Albums and artists** collected from track tags, with cover art and per-collection
   pages that open inside the tab (playback controls stay visible).
+- **Star albums and artists** from their edit pages; starred collections appear in a
+  collapsible **Starred** section at the top of their archive.
+- **Albums and manual playlists** can be reordered by dragging the handle beside each
+  track number. Album order is remembered; smart and dynamic lists remain read-only.
+- **Albums, Artists and Files** share the Songs ordering menu (date added, title,
+  artist, duration) and the alphabetical letter rail for the two alphabetical orders.
 - **Files browser** with a scrollable breadcrumb, per-folder song counts, and
-  **starred folders** pinned at the root for quick access. Long-press a folder and
-  choose **Reorder contents** to file its songs under `artist/album/` at the root of
-  the containing Music Library (songs without an artist are left where they are).
-- **Search** across tracks, albums and artists, with recent queries.
+  **starred folders** pinned at the root for quick access. Every folder has a kebab
+  menu with **Reorder contents**, **Move**, and **Explode**. Reorder files its songs
+  under `artist/album/` at the root of the containing Music Library (songs without an
+  artist are left where they are); Move places the folder inside another folder of the
+  same library; Explode moves its contents to the parent and deletes the folder if
+  nothing is left.
+- **Search** across tracks, albums and artists, with recent queries. Pull down at the
+  top of any scrollable page to reveal it with a finger-linked animation, or use the
+  top-bar magnifier.
+- **Long-press bulk selection** on any song row: set the artist or album, add or remove
+  tags, add the whole selection to a playlist, or compress/delete it after confirmation.
 
 ### Playback
 
@@ -75,8 +88,10 @@ notes, palette, contrast measurements and motion inventory are in
 - Pause when headphones are unplugged and proper audio-focus handling.
 - Persistent mini player and a full Now Playing screen. The rating thumbs sit at the
   top of the player, above the artwork.
-- The Now Playing progress control is a **waveform** of the song's real loudness, so
-  quiet and loud sections are visible; tap or drag anywhere on it to seek.
+- The Now Playing progress control is a **waveform** of the song's real loudness,
+  overlaid on the cover art; quiet and loud sections are visible, and tapping or
+  dragging it seeks. The rating controls sit directly on the page without a panel
+  background.
 - A disliked now-playing song (score below `0`) shows **Delete** and **Compress audio**
   actions above the thumbs, opening the existing confirmation and bitrate picker.
 - Swipe the **cover art** left/right to move to the next/previous track.
@@ -87,13 +102,19 @@ notes, palette, contrast measurements and motion inventory are in
 
 - Signed integer ratings (neutral `0`) shown as icon-only thumbs; the score sets the
   weight used by shuffle.
-- Favourites and free-form tags per track.
+- Bulk-select disliked songs to reset their scores, delete the files, or compress
+  several at once from the Dashboard.
+- Favourites and free-form tags per track. Tag Add/Remove is saved immediately; the
+  editor also offers the eight most-used library tags the song lacks as one-tap chips,
+  and its Save button commits a tag still typed in the Add field.
+- Pulling down at the top of the song editor goes back, matching its top-left arrow.
 - Read and write real tags — ID3v2, Vorbis comments, MP4 atoms — through
   [jaudiotagger](https://github.com/jthink/jaudiotagger).
 - Optional **write-through**: ratings, favourites and app tags can be mirrored into the
   audio file's own metadata, so they survive a reinstall and travel to other players.
 - Rename files, edit title/artist/album/year/track/disc/genre/comment, and manage
-  artwork. The Save action stays pinned above the keyboard while the form scrolls.
+  artwork. The Save action stays pinned above the keyboard while the form scrolls;
+  focusing artist or album moves that field to the top so its suggestions stay visible.
 - If the edited song is playing, the new metadata appears immediately but the file is
   written only once playback pauses or moves to another track, so the audio never
   stutters while the file is rewritten.
@@ -105,7 +126,11 @@ notes, palette, contrast measurements and motion inventory are in
 
 ### Interface
 
-- Dark and light cyberpunk themes, both meeting WCAG AAA for body text.
+- **Mirrored bottom navigation** for the dominant hand: right-handed gets Dashboard,
+  Playlists, Songs, Menu; left-handed gets the exact mirror, Menu, Songs, Playlists,
+  Dashboard.
+- **System, light and dark** cyberpunk themes, both palettes meeting WCAG AAA for body
+  text. System follows the device’s dark-mode setting; the selector is in Settings.
 - Five launcher icon styles (Equalizer, Vinyl, Note, Wave, Headphones).
 - English, Spanish, French and Portuguese.
 - Large text and reduced-motion friendly: animations are state-driven and stop when

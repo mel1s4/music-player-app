@@ -10,7 +10,7 @@ import org.json.JSONObject
 
 /**
  * The app's own database: favourites, ratings, tags, playlists, first-seen stamps,
- * listening history and the pending metadata queue.
+ * listening history, album orders and the pending metadata queue.
  *
  * It lives in SQLite rather than SharedPreferences because these are relational lists
  * that grow with the library and are queried/filtered constantly (tags by URI, tracks
@@ -66,6 +66,31 @@ class LibraryStore(context: Context) : TrackMetaCache {
         }
     }
 
+    /** User-defined play order for albums, keyed by the normalized album name. */
+    fun albumOrders(): Map<String, List<String>> = buildMap {
+        db.query(
+            "album_orders",
+            arrayOf("album_key", "uris"),
+            null,
+            null,
+            null,
+            null,
+            null,
+        ).use { c ->
+            while (c.moveToNext()) {
+                val key = c.getString(0) ?: continue
+                val payload = c.getString(1) ?: continue
+                val uris = runCatching { JSONArray(payload) }.getOrNull() ?: continue
+                val list = buildList {
+                    for (i in 0 until uris.length()) {
+                        uris.optString(i).takeIf { it.isNotBlank() }?.let(::add)
+                    }
+                }
+                put(key, list)
+            }
+        }
+    }
+
     /** Edits saved while their track was playing, oldest first. */
     fun pendingMetadata(): List<PendingMetadata> = buildList {
         db.query(
@@ -88,6 +113,21 @@ class LibraryStore(context: Context) : TrackMetaCache {
     /** Folder paths the user pinned in the File Explorer; independent of the track URIs. */
     fun starredFolders(): Set<String> = buildSet {
         db.query("starred_folders", arrayOf("path"), null, null, null, null, null).use { c ->
+            while (c.moveToNext()) add(c.getString(0))
+        }
+    }
+
+    /** Pinned album or artist names, grouped by [kind] ("album" or "artist"). */
+    fun starredCollections(kind: String): Set<String> = buildSet {
+        db.query(
+            "starred_collections",
+            arrayOf("name"),
+            "kind = ?",
+            arrayOf(kind),
+            null,
+            null,
+            null,
+        ).use { c ->
             while (c.moveToNext()) add(c.getString(0))
         }
     }
@@ -274,6 +314,26 @@ class LibraryStore(context: Context) : TrackMetaCache {
         }
     }
 
+    fun setCollectionStarred(kind: String, name: String, starred: Boolean) {
+        if (starred) {
+            db.insertWithOnConflict(
+                "starred_collections",
+                null,
+                ContentValues().apply {
+                    put("kind", kind)
+                    put("name", name)
+                },
+                SQLiteDatabase.CONFLICT_REPLACE,
+            )
+        } else {
+            db.delete(
+                "starred_collections",
+                "kind = ? AND name = ?",
+                arrayOf(kind, name),
+            )
+        }
+    }
+
     fun setRating(uri: String, score: Int) {
         db.insertWithOnConflict(
             "ratings",
@@ -360,6 +420,22 @@ class LibraryStore(context: Context) : TrackMetaCache {
                 "SELECT ?, plays, last_played FROM listens WHERE uri = ?",
             arrayOf(toUri, fromUri),
         )
+    }
+
+    fun setAlbumOrder(albumKey: String, uris: List<String>) {
+        db.insertWithOnConflict(
+            "album_orders",
+            null,
+            ContentValues().apply {
+                put("album_key", albumKey)
+                put("uris", JSONArray(uris).toString())
+            },
+            SQLiteDatabase.CONFLICT_REPLACE,
+        )
+    }
+
+    fun deleteAlbumOrder(albumKey: String) {
+        db.delete("album_orders", "album_key = ?", arrayOf(albumKey))
     }
 
     fun setPendingMetadata(pending: PendingMetadata) {
@@ -509,6 +585,8 @@ class LibraryStore(context: Context) : TrackMetaCache {
             createStarredFolders(db)
             createListens(db)
             createPendingMetadata(db)
+            createAlbumOrders(db)
+            createStarredCollections(db)
             db.execSQL("CREATE INDEX tags_uri ON tags(uri)")
             db.execSQL("CREATE INDEX playlist_tracks_list ON playlist_tracks(playlist_id)")
             migrateFromPreferences(db)
@@ -533,6 +611,27 @@ class LibraryStore(context: Context) : TrackMetaCache {
             if (oldVersion < 6) {
                 createPendingMetadata(db)
             }
+            if (oldVersion < 7) {
+                createAlbumOrders(db)
+            }
+            if (oldVersion < 8) {
+                createStarredCollections(db)
+            }
+        }
+
+        private fun createStarredCollections(db: SQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS starred_collections (" +
+                    "kind TEXT NOT NULL, name TEXT NOT NULL, " +
+                    "PRIMARY KEY (kind, name))",
+            )
+        }
+
+        private fun createAlbumOrders(db: SQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS album_orders (" +
+                    "album_key TEXT PRIMARY KEY NOT NULL, uris TEXT NOT NULL)",
+            )
         }
 
         private fun createPendingMetadata(db: SQLiteDatabase) {
@@ -681,6 +780,6 @@ class LibraryStore(context: Context) : TrackMetaCache {
 
     private companion object {
         const val DB_NAME = "library.db"
-        const val DB_VERSION = 6
+        const val DB_VERSION = 8
     }
 }

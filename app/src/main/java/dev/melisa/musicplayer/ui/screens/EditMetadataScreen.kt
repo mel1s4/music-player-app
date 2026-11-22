@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.Numbers
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Title
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -55,6 +56,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -63,12 +65,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import dev.melisa.musicplayer.R
 import dev.melisa.musicplayer.data.AudioFileDetails
@@ -87,6 +97,7 @@ import dev.melisa.musicplayer.ui.components.SectionKicker
 import dev.melisa.musicplayer.ui.components.formatTime
 import dev.melisa.musicplayer.data.Track
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 /**
  * Edits the real tag frames inside the file, not an app-side override — so the change
@@ -108,6 +119,59 @@ fun EditMetadataScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
+    // Pulling down at the top of the form performs the same action as the back arrow.
+    val backThresholdPx = with(LocalDensity.current) { 72.dp.toPx() }
+    var backPull by remember { mutableFloatStateOf(0f) }
+    var backTriggered by remember { mutableStateOf(false) }
+    val backPullConnection = remember(scrollState) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (backPull <= 0f || available.y >= 0f) return Offset.Zero
+                val consumed = available.y.coerceAtLeast(-backPull)
+                backPull = (backPull + consumed).coerceAtLeast(0f)
+                return Offset(0f, consumed)
+            }
+
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource,
+            ): Offset {
+                if (scrollState.value > 0 || available.y <= 0f || backTriggered) {
+                    return Offset.Zero
+                }
+                backPull = (backPull + available.y).coerceAtMost(backThresholdPx)
+                if (backPull >= backThresholdPx) {
+                    backTriggered = true
+                    onClose()
+                }
+                return Offset(0f, available.y)
+            }
+
+            override suspend fun onPostFling(
+                consumed: Velocity,
+                available: Velocity,
+            ): Velocity {
+                backPull = 0f
+                backTriggered = false
+                return Velocity.Zero
+            }
+        }
+    }
+    val density = LocalDensity.current
+    // The scrollable form starts below the title bar. Keeping its window position lets
+    // us turn a field's window position into a content offset when focus arrives.
+    val viewportTop = remember { floatArrayOf(0f) }
+    val scrollFieldToTop: (Float) -> Unit = { fieldTop ->
+        val topInset = with(density) { 8.dp.toPx() }
+        scope.launch {
+            val target = (scrollState.value + fieldTop - viewportTop[0] - topInset)
+                .coerceAtLeast(0f)
+                .roundToInt()
+            scrollState.animateScrollTo(target)
+        }
+    }
 
     var metadata by remember(track.uri) { mutableStateOf<SongMetadata?>(null) }
     var fileInfo by remember(track.uri) { mutableStateOf<SongFileInfo?>(null) }
@@ -115,6 +179,8 @@ fun EditMetadataScreen(
     var saving by remember(track.uri) { mutableStateOf(false) }
     var errorRes by remember(track.uri) { mutableStateOf<Int?>(null) }
     var audioDetails by remember(track.uri) { mutableStateOf<AudioFileDetails?>(null) }
+    // Hoisted so the sticky Save action can commit a tag that was typed but not Add-ed.
+    var tagDraft by remember(track.uri) { mutableStateOf("") }
 
     LaunchedEffect(track.uri) {
         val info = songFileInfo(track.uri)
@@ -132,6 +198,13 @@ fun EditMetadataScreen(
         scope.launch {
             saving = true
             errorRes = null
+
+            // Tags are app-level and apply instantly. Save also flushes a tag that is
+            // still sitting in the Add field, so typing it and saving is one step.
+            tagDraft.trim().takeIf { it.isNotEmpty() }?.let { typedTag ->
+                extras.addTag(track.uri.toString(), typedTag)
+                tagDraft = ""
+            }
 
             // Rewriting the file under a live decoder is what causes the audible gap.
             // While the song is playing, remember the edit and let the player pause or
@@ -238,7 +311,9 @@ fun EditMetadataScreen(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
+                        .onGloballyPositioned { viewportTop[0] = it.positionInRoot().y }
+                        .nestedScroll(backPullConnection)
+                        .verticalScroll(scrollState)
                         .padding(horizontal = 20.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
@@ -263,6 +338,7 @@ fun EditMetadataScreen(
                         icon = Icons.Filled.Person,
                         value = current.artist,
                         suggestions = knownArtists,
+                        onFocusTop = scrollFieldToTop,
                         onValueChange = { metadata = current.copy(artist = it) },
                     )
                     Field(
@@ -276,6 +352,7 @@ fun EditMetadataScreen(
                         icon = Icons.Filled.LibraryMusic,
                         value = current.album,
                         suggestions = knownAlbums,
+                        onFocusTop = scrollFieldToTop,
                         onValueChange = { metadata = current.copy(album = it) },
                     )
                     Field(
@@ -349,7 +426,12 @@ fun EditMetadataScreen(
                         modifier = Modifier.padding(top = 12.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant,
                     )
-                    TagsSection(uri = track.uri.toString(), extras = extras)
+                    TagsSection(
+                        uri = track.uri.toString(),
+                        extras = extras,
+                        draft = tagDraft,
+                        onDraftChange = { tagDraft = it },
+                    )
 
                     HorizontalDivider(
                         modifier = Modifier.padding(top = 12.dp),
@@ -424,9 +506,11 @@ private fun Field(
     minLines: Int = 1,
     suggestions: List<String> = emptyList(),
     modifier: Modifier = Modifier,
+    onFocusTop: ((Float) -> Unit)? = null,
     onValueChange: (String) -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
+    val fieldTop = remember { floatArrayOf(0f) }
     var expanded by remember { mutableStateOf(false) }
     val leading: (@Composable () -> Unit)? = icon?.let { vector ->
         { Icon(vector, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -458,7 +542,11 @@ private fun Field(
         label = "suggestions-arrow",
     )
 
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .onGloballyPositioned { fieldTop[0] = it.positionInRoot().y },
+    ) {
         OutlinedTextField(
             value = value,
             onValueChange = { typed ->
@@ -478,7 +566,15 @@ private fun Field(
             leadingIcon = leading,
             trailingIcon = if (hasSuggestions) {
                 {
-                    IconButton(onClick = { expanded = !expanded }) {
+                    IconButton(
+                        onClick = {
+                            val opening = !expanded
+                            expanded = opening
+                            // The field may already be focused when the arrow is
+                            // tapped; give the list the same top-of-viewport space.
+                            if (opening) onFocusTop?.invoke(fieldTop[0])
+                        },
+                    ) {
                         Icon(
                             imageVector = Icons.Filled.ArrowDropDown,
                             contentDescription = stringResource(R.string.metadata_choose_existing),
@@ -497,8 +593,14 @@ private fun Field(
             modifier = Modifier
                 .fillMaxWidth()
                 .onFocusChanged { focus ->
-                    // Leaving the field must not leave a wall of names covering the form.
-                    if (!focus.isFocused) expanded = false
+                    if (!focus.isFocused) {
+                        // Leaving the field must not leave a wall of names covering the form.
+                        expanded = false
+                    } else if (hasSuggestions) {
+                        // Put the input at the top of the scroll viewport so its
+                        // suggestions have the space below it, above the keyboard.
+                        onFocusTop?.invoke(fieldTop[0])
+                    }
                 },
         )
 
@@ -678,11 +780,75 @@ private fun SectionTitle(title: String) {
 }
 
 @Composable
-private fun TagsSection(uri: String, extras: LibraryExtras) {
-    var draft by remember { mutableStateOf("") }
+private fun TagsSection(
+    uri: String,
+    extras: LibraryExtras,
+    draft: String,
+    onDraftChange: (String) -> Unit,
+) {
     val tags = extras.tagsFor(uri)
 
+    // The eight most-used tags across the library that this song does not have yet.
+    // Counting is per track and case-insensitive, and the first spelling wins.
+    val frequentTags = remember(extras.tags, tags) {
+        val onSong = tags.map { it.lowercase() }.toSet()
+        val counts = mutableMapOf<String, Int>()
+        val labels = mutableMapOf<String, String>()
+        for (list in extras.tags.values) {
+            for (raw in list) {
+                val label = raw.trim()
+                if (label.isEmpty()) continue
+                val key = label.lowercase()
+                counts[key] = (counts[key] ?: 0) + 1
+                labels.putIfAbsent(key, label)
+            }
+        }
+        counts.entries
+            .filterNot { onSong.contains(it.key) }
+            .sortedWith(
+                compareByDescending<Map.Entry<String, Int>> { it.value }
+                    .thenBy { labels[it.key].orEmpty().lowercase() },
+            )
+            .mapNotNull { labels[it.key] }
+            .take(8)
+    }
+
     SectionTitle(stringResource(R.string.tags_title))
+
+    if (frequentTags.isNotEmpty()) {
+        Text(
+            text = stringResource(R.string.tags_frequent),
+            modifier = Modifier.padding(top = 12.dp, bottom = 2.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            frequentTags.forEach { tag ->
+                AssistChip(
+                    onClick = { extras.addTag(uri, tag) },
+                    label = {
+                        Text(
+                            text = tag,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    },
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+    }
 
     if (tags.isEmpty()) {
         Text(
@@ -717,7 +883,7 @@ private fun TagsSection(uri: String, extras: LibraryExtras) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         OutlinedTextField(
             value = draft,
-            onValueChange = { draft = it },
+            onValueChange = onDraftChange,
             singleLine = true,
             modifier = Modifier.weight(1f),
             label = { Text(stringResource(R.string.tags_hint)) },
@@ -725,8 +891,10 @@ private fun TagsSection(uri: String, extras: LibraryExtras) {
         Spacer(Modifier.width(8.dp))
         TextButton(
             onClick = {
+                // Add is itself the save: the database and the file-sync queue are
+                // updated now, not when the sticky Save button is pressed.
                 extras.addTag(uri, draft)
-                draft = ""
+                onDraftChange("")
             },
             enabled = draft.isNotBlank(),
         ) {

@@ -48,30 +48,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.melisa.musicplayer.R
 import dev.melisa.musicplayer.data.Track
+import dev.melisa.musicplayer.ui.components.AlphabetRail
+import dev.melisa.musicplayer.ui.components.AlphabetSectionHeader
 import dev.melisa.musicplayer.ui.components.CyberBadge
 import dev.melisa.musicplayer.ui.components.LibraryHero
 import dev.melisa.musicplayer.ui.components.MessageState
 import dev.melisa.musicplayer.ui.components.ScanningState
 import dev.melisa.musicplayer.ui.components.SectionKicker
 import dev.melisa.musicplayer.ui.components.SongRow
+import dev.melisa.musicplayer.ui.components.TrackSort
+import dev.melisa.musicplayer.ui.components.TrackSortButton
+import dev.melisa.musicplayer.ui.components.labelRes
+import dev.melisa.musicplayer.ui.components.sectionLabelFor
+import dev.melisa.musicplayer.ui.components.sortKey
 import java.text.Normalizer
 import kotlinx.coroutines.launch
 
-private enum class TrackSort { DateAdded, Title, Artist, Duration }
-
 /** A run of songs that share an initial, with "#" for anything that is not a letter. */
 private data class SongSection(val label: String, val tracks: List<Track>)
-
-private val diacritics = Regex("\\p{Mn}+")
-
-/** Lowercase, accent-free sort key so "Él" sorts with E instead of after Z. */
-private fun sortKey(text: String): String =
-    Normalizer.normalize(text.trim(), Normalizer.Form.NFD).replace(diacritics, "").lowercase()
-
-private fun sectionLabelFor(text: String): String {
-    val first = sortKey(text).firstOrNull()
-    return if (first != null && first.isLetter()) first.uppercaseChar().toString() else "#"
-}
 
 @Composable
 fun SongsScreen(
@@ -79,6 +73,7 @@ fun SongsScreen(
     addedAt: Map<String, Long>,
     currentTrackUri: String?,
     isPlaying: Boolean,
+    isScanning: Boolean,
     hasLibraries: Boolean,
     onPlay: (Track, List<Track>) -> Unit,
     onShuffleAll: () -> Unit,
@@ -93,7 +88,6 @@ fun SongsScreen(
     onFreeSpace: () -> Unit,
 ) {
     var sort by rememberSaveable { mutableStateOf(TrackSort.DateAdded) }
-    var sortMenu by rememberSaveable { mutableStateOf(false) }
 
     val sorted = remember(tracks, sort, addedAt) {
         when (sort) {
@@ -197,6 +191,7 @@ fun SongsScreen(
                         albums = albums,
                         sizeBytes = sizeBytes,
                         hours = hours,
+                        isScanning = isScanning,
                         onRescan = onRescan,
                         onFreeSpace = onFreeSpace,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
@@ -228,36 +223,10 @@ fun SongsScreen(
                                 Text(stringResource(R.string.action_shuffle), maxLines = 1)
                             }
                         }
-                        Box {
-                            IconButton(onClick = { sortMenu = true }, modifier = Modifier.size(48.dp)) {
-                                Icon(
-                                    imageVector = Icons.Filled.Sort,
-                                    contentDescription = stringResource(R.string.sort_by),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
-                                TrackSort.entries.forEach { option ->
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(option.labelRes())) },
-                                        onClick = {
-                                            sort = option
-                                            sortMenu = false
-                                        },
-                                        trailingIcon = if (sort == option) {
-                                            {
-                                                CyberBadge(
-                                                    text = "✓",
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                )
-                                            }
-                                        } else {
-                                            null
-                                        },
-                                    )
-                                }
-                            }
-                        }
+                        TrackSortButton(
+                            sort = sort,
+                            onSort = { sort = it },
+                        )
                     }
                 }
 
@@ -281,7 +250,7 @@ fun SongsScreen(
                 } else {
                     sections.forEach { section ->
                         item(key = "section:${section.label}") {
-                            SectionHeader(section.label)
+                            AlphabetSectionHeader(section.label)
                         }
                         items(section.tracks, key = { it.uri.toString() }) { track ->
                             SongRow(
@@ -319,103 +288,4 @@ fun SongsScreen(
             }
         }
     }
-}
-
-/** Sticky initial separator. The opaque background keeps rows from showing through. */
-@Composable
-private fun SectionHeader(label: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Spacer(Modifier.width(12.dp))
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .height(1.dp)
-                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-        )
-    }
-}
-
-/**
- * The letter rail: tap a letter to jump, or drag along it to scrub. Letters are spaced
- * by a fixed height, so the finger position maps cleanly to an index.
- */
-@Composable
-private fun AlphabetRail(
-    letters: List<String>,
-    current: String?,
-    onPick: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val rowHeight = 24.dp
-    val rowHeightPx = with(LocalDensity.current) { rowHeight.toPx() }
-
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.8f))
-            .padding(vertical = 4.dp)
-            // One gesture handler for taps and drags: the finger position is mapped to
-            // an index by the same formula, so touching a letter always lands on it.
-            .pointerInput(letters, rowHeightPx) {
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    var lastIndex = -1
-                    fun pickAt(y: Float) {
-                        val index = (y / rowHeightPx).toInt().coerceIn(0, letters.lastIndex)
-                        if (index != lastIndex) {
-                            lastIndex = index
-                            onPick(letters[index])
-                        }
-                    }
-                    pickAt(down.position.y)
-                    var change = down
-                    while (change.pressed) {
-                        val event = awaitPointerEvent()
-                        change = event.changes.firstOrNull() ?: break
-                        pickAt(change.position.y)
-                        change.consume()
-                    }
-                }
-            },
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        letters.forEach { letter ->
-            Box(
-                modifier = Modifier
-                    .width(26.dp)
-                    .height(rowHeight),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = letter,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = if (letter == current) FontWeight.Bold else FontWeight.Normal,
-                    color = if (letter == current) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                )
-            }
-        }
-    }
-}
-
-/** Big label-plus-icon target; three of these replace the old outlined pills. */
-private fun TrackSort.labelRes(): Int = when (this) {
-    TrackSort.DateAdded -> R.string.sort_date_added
-    TrackSort.Title -> R.string.sort_title
-    TrackSort.Artist -> R.string.field_artist
-    TrackSort.Duration -> R.string.sort_duration
 }

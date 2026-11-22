@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
@@ -22,6 +23,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setProgress
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.melisa.musicplayer.R
 import dev.melisa.musicplayer.data.AudioWaveform
@@ -43,10 +45,14 @@ fun WaveformSeekBar(
     onSeek: (Float) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    height: Dp = 64.dp,
+    playedColor: Color? = null,
+    restColor: Color? = null,
+    centerLineColor: Color? = null,
 ) {
-    val playedColor = MaterialTheme.colorScheme.primary
-    val restColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.28f)
-    val centerLineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+    val played = playedColor ?: MaterialTheme.colorScheme.primary
+    val rest = restColor ?: MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.28f)
+    val center = centerLineColor ?: MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
     val seekLabel = stringResource(R.string.seek_song)
     val currentScrub by rememberUpdatedState(onScrub)
     val currentSeek by rememberUpdatedState(onSeek)
@@ -55,7 +61,7 @@ fun WaveformSeekBar(
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(64.dp)
+            .height(height)
             .semantics {
                 contentDescription = seekLabel
                 progressBarRangeInfo = ProgressBarRangeInfo(clamped, 0f..1f)
@@ -98,7 +104,7 @@ fun WaveformSeekBar(
         val activeX = clamped * size.width
 
         drawLine(
-            color = centerLineColor,
+            color = center,
             start = Offset(0f, centerY),
             end = Offset(size.width, centerY),
             strokeWidth = 1.dp.toPx(),
@@ -108,7 +114,7 @@ fun WaveformSeekBar(
             val amplitude = amplitudes?.getOrNull(index) ?: placeholder(index)
             val height = max(minBar, amplitude.coerceIn(0f, 1f) * maxBar)
             val left = index * slot + barInset
-            val color = if (left + barWidth / 2f <= activeX) playedColor else restColor
+            val color = if (left + barWidth / 2f <= activeX) played else rest
             drawRoundRect(
                 color = color,
                 topLeft = Offset(left, centerY - height / 2f),
@@ -121,19 +127,19 @@ fun WaveformSeekBar(
         // readable even where the bars happen to be short.
         val playheadX = activeX.coerceIn(1.5.dp.toPx(), size.width - 1.5.dp.toPx())
         drawCircle(
-            color = playedColor.copy(alpha = 0.16f),
+            color = played.copy(alpha = 0.16f),
             radius = 12.dp.toPx(),
             center = Offset(playheadX, centerY),
         )
         drawLine(
-            color = playedColor,
+            color = played,
             start = Offset(playheadX, 1.dp.toPx()),
             end = Offset(playheadX, size.height - 1.dp.toPx()),
             strokeWidth = 2.dp.toPx(),
             cap = StrokeCap.Round,
         )
         drawCircle(
-            color = playedColor,
+            color = played,
             radius = 4.dp.toPx(),
             center = Offset(playheadX, centerY),
         )

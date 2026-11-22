@@ -49,6 +49,12 @@ class LibraryExtras(context: Context) {
     var starredFolders by mutableStateOf(store.starredFolders())
         private set
 
+    /** Pinned album and artist names, shown in a starred section above the archive. */
+    var starredAlbums by mutableStateOf(store.starredCollections("album"))
+        private set
+    var starredArtists by mutableStateOf(store.starredCollections("artist"))
+        private set
+
     var tags by mutableStateOf(store.tags())
         private set
 
@@ -80,9 +86,29 @@ class LibraryExtras(context: Context) {
     var pendingMetadata by mutableStateOf(store.pendingMetadata())
         private set
 
+    /** User-defined play order for albums, keyed by normalized album name. */
+    var albumOrders by mutableStateOf(store.albumOrders())
+        private set
+
     fun isFavorite(uri: String): Boolean = favorites.contains(uri)
 
     fun isFolderStarred(path: String): Boolean = starredFolders.contains(path)
+
+    fun isAlbumStarred(name: String): Boolean = starredAlbums.contains(name)
+
+    fun isArtistStarred(name: String): Boolean = starredArtists.contains(name)
+
+    fun toggleAlbumStarred(name: String) {
+        val starred = !starredAlbums.contains(name)
+        starredAlbums = if (starred) starredAlbums + name else starredAlbums - name
+        store.setCollectionStarred("album", name, starred)
+    }
+
+    fun toggleArtistStarred(name: String) {
+        val starred = !starredArtists.contains(name)
+        starredArtists = if (starred) starredArtists + name else starredArtists - name
+        store.setCollectionStarred("artist", name, starred)
+    }
 
     /** Pins or unpins a File Explorer folder. The root itself has no path to star. */
     fun toggleFolderStarred(path: String) {
@@ -172,6 +198,20 @@ class LibraryExtras(context: Context) {
         if (pendingMetadata.any { it.uri == uri }) {
             pendingMetadata = pendingMetadata.filterNot { it.uri == uri }
             store.deletePendingMetadata(uri)
+        }
+        if (albumOrders.isNotEmpty()) {
+            val next = albumOrders.mapValues { (_, uris) -> uris.filterNot { it == uri } }
+            val changed = next.filter { (key, uris) -> uris != albumOrders[key] }
+            if (changed.isNotEmpty()) {
+                albumOrders = next.filterValues { it.isNotEmpty() }
+                changed.forEach { (key, uris) ->
+                    if (uris.isEmpty()) {
+                        store.deleteAlbumOrder(key)
+                    } else {
+                        store.setAlbumOrder(key, uris)
+                    }
+                }
+            }
         }
         val affected = playlists.filter { it.trackUris.contains(uri) }
         if (affected.isNotEmpty()) {
@@ -267,6 +307,16 @@ class LibraryExtras(context: Context) {
         pendingMetadata = pendingMetadata.map { pending ->
             if (pending.uri == oldUri) pending.copy(uri = newUri) else pending
         }
+        if (albumOrders.isNotEmpty()) {
+            val next = albumOrders.mapValues { (_, uris) ->
+                uris.map { if (it == oldUri) newUri else it }
+            }
+            val changed = next.filter { (key, uris) -> uris != albumOrders[key] }
+            if (changed.isNotEmpty()) {
+                albumOrders = next
+                changed.forEach { (key, uris) -> store.setAlbumOrder(key, uris) }
+            }
+        }
         playlists = playlists.map { playlist ->
             if (playlist.trackUris.contains(oldUri)) {
                 playlist.copy(trackUris = playlist.trackUris.map { if (it == oldUri) newUri else it })
@@ -310,6 +360,59 @@ class LibraryExtras(context: Context) {
     }
 
     fun addedAt(uri: String): Long? = addedAt[uri]
+
+    /** Album names are matched case-insensitively across the app. */
+    fun albumOrderKey(album: String): String = album.trim().lowercase()
+
+    /**
+     * Applies a saved album order, appending tracks that were added after the last
+     * drag (and anything whose URI changed) in title order.
+     */
+    fun albumTracksInOrder(album: String, tracks: List<Track>): List<Track> {
+        val byUri = tracks.associateBy { it.uri.toString() }
+        val ordered = albumOrders[albumOrderKey(album)].orEmpty()
+            .mapNotNull { byUri[it] }
+        if (ordered.isEmpty()) return tracks.sortedBy { it.title.lowercase() }
+
+        val seen = ordered.mapTo(mutableSetOf()) { it.uri.toString() }
+        return ordered + tracks
+            .filter { it.uri.toString() !in seen }
+            .sortedBy { it.title.lowercase() }
+    }
+
+    fun setAlbumOrder(album: String, uris: List<String>) {
+        val key = albumOrderKey(album)
+        val cleaned = uris.filter { it.isNotBlank() }.distinct()
+        albumOrders = if (cleaned.isEmpty()) {
+            albumOrders - key
+        } else {
+            albumOrders + (key to cleaned)
+        }
+        if (cleaned.isEmpty()) {
+            store.deleteAlbumOrder(key)
+        } else {
+            store.setAlbumOrder(key, cleaned)
+        }
+    }
+
+    /** Rewrites a manual playlist in the exact order the user dropped the rows. */
+    fun reorderPlaylist(playlistId: String, uris: List<String>) {
+        val target = playlists.firstOrNull { it.id == playlistId && !it.isDynamic } ?: return
+        val allowed = target.trackUris.toSet()
+        val reordered = uris.filter { it in allowed }.distinct()
+        val trailing = target.trackUris.filterNot { it in reordered }
+        val finalOrder = reordered + trailing
+        if (finalOrder == target.trackUris) return
+
+        playlists = playlists.map { playlist ->
+            if (playlist.id == playlistId) {
+                playlist.copy(trackUris = finalOrder)
+            } else {
+                playlist
+            }
+        }
+        store.setPlaylistTracks(playlistId, finalOrder)
+    }
 
     fun pendingMetadataFor(uri: String): PendingMetadata? =
         pendingMetadata.firstOrNull { it.uri == uri }

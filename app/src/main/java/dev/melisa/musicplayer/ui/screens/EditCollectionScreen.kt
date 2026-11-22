@@ -28,6 +28,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -69,6 +71,8 @@ fun EditCollectionScreen(
     isArtist: Boolean,
     libraries: List<String>,
     sampleTrackUri: Uri?,
+    isStarred: Boolean,
+    onToggleStar: () -> Unit,
     onClose: () -> Unit,
     onSaved: () -> Unit,
 ) {
@@ -149,6 +153,19 @@ fun EditCollectionScreen(
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                IconButton(onClick = onToggleStar) {
+                    Icon(
+                        imageVector = if (isStarred) Icons.Filled.Star else Icons.Filled.StarBorder,
+                        contentDescription = stringResource(
+                            if (isStarred) R.string.collections_unstar else R.string.collections_star,
+                        ),
+                        tint = if (isStarred) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                     )
                 }
             }

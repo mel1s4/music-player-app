@@ -98,6 +98,7 @@ fun SearchScreen(
     onDelete: (Track) -> Unit,
     onOpenAlbum: (String) -> Unit,
     onOpenArtist: (String) -> Unit,
+    autoFocus: Boolean = true,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf(SearchFilter.All) }
@@ -230,8 +231,15 @@ fun SearchScreen(
         }
     }
 
-    // Jump straight into the field: the whole tab exists for typing.
-    LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
+    // Jump straight into the field once the page is actually committed. During a
+    // pull-down preview the keyboard must stay out of the animation.
+    LaunchedEffect(autoFocus) {
+        if (autoFocus) {
+            runCatching { focusRequester.requestFocus() }
+        } else {
+            focus.clearFocus()
+        }
+    }
 }
 
 @Composable

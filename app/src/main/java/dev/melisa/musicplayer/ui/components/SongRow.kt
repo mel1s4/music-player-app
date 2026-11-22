@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -27,7 +29,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.melisa.musicplayer.R
@@ -56,13 +61,19 @@ fun SongRow(
     onDislike: () -> Unit,
     onCompress: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
+    trackNumber: Int? = null,
+    dragHandle: Modifier? = null,
     isPlaying: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
+    val selection = LocalSongSelection.current
+    val selecting = selection?.active == true
+    val bulkSelected = selection?.isSelected(track.uri.toString()) == true
+    val haptics = LocalHapticFeedback.current
 
     val background by animateColorAsState(
-        targetValue = if (selected) {
+        targetValue = if (selected || bulkSelected) {
             MaterialTheme.colorScheme.primary.copy(alpha = 0.09f)
         } else {
             MaterialTheme.colorScheme.background
@@ -76,17 +87,68 @@ fun SongRow(
             .fillMaxWidth()
             .heightIn(min = 78.dp)
             .background(background)
-            .cyberClick(onClick = onClick)
-            .padding(start = 16.dp, end = 6.dp, top = 10.dp, bottom = 10.dp),
+            .padding(
+                start = if (trackNumber != null || dragHandle != null) 8.dp else 16.dp,
+                end = 6.dp,
+                top = 10.dp,
+                bottom = 10.dp,
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SongCover(
-            track = track,
-            side = 48.dp,
-            playing = selected && isPlaying,
-        )
+        if (trackNumber != null || dragHandle != null) {
+            Row(
+                modifier = Modifier.width(if (dragHandle != null) 62.dp else 28.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = trackNumber?.toString().orEmpty(),
+                    modifier = Modifier.width(18.dp),
+                    textAlign = TextAlign.End,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (dragHandle != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .then(dragHandle),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.DragHandle,
+                            contentDescription = stringResource(R.string.reorder_track),
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
 
-        Column(
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .heightIn(min = 58.dp)
+                .cyberClick(
+                    onClick = {
+                        if (selecting) selection?.toggle(track) else onClick()
+                    },
+                    onLongClick = {
+                        if (selection != null) {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            if (selecting) selection.toggle(track) else selection.start(track)
+                        }
+                    },
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SongCover(
+                track = track,
+                side = 48.dp,
+                playing = selected && isPlaying,
+            )
+
+            Column(
             modifier = Modifier
                 .weight(1f)
                 .padding(start = 14.dp, end = 10.dp),
@@ -94,7 +156,7 @@ fun SongRow(
             Text(
                 text = track.title,
                 style = MaterialTheme.typography.bodyLarge,
-                color = if (selected) {
+                color = if (selected || bulkSelected) {
                     MaterialTheme.colorScheme.primary
                 } else {
                     MaterialTheme.colorScheme.onSurface
@@ -116,42 +178,51 @@ fun SongRow(
             }
         }
 
-        if (selected && isPlaying) {
-            EqualizerBars(
-                playing = true,
-                barCount = 3,
-                barWidth = 2.5.dp,
-                height = 14.dp,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(end = 6.dp),
+        if (selecting) {
+            Checkbox(
+                checked = bulkSelected,
+                onCheckedChange = { selection?.toggle(track) },
+                modifier = Modifier.padding(end = 4.dp),
             )
         } else {
-            Text(
-                text = formatTime(track.durationMs),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        Box {
-            IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(48.dp)) {
-                Icon(
-                    imageVector = Icons.Filled.MoreVert,
-                    contentDescription = stringResource(R.string.action_more),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            if (selected && isPlaying) {
+                EqualizerBars(
+                    playing = true,
+                    barCount = 3,
+                    barWidth = 2.5.dp,
+                    height = 14.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(end = 6.dp),
+                )
+            } else {
+                Text(
+                    text = formatTime(track.durationMs),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            SongActionMenu(
-                expanded = menuOpen,
-                onDismiss = { menuOpen = false },
-                onAddToPlaylist = onAddToPlaylist,
-                onManageTags = onManageTags,
-                onEditMetadata = onEditMetadata,
-                onLike = onLike,
-                onDislike = onDislike,
-                onCompress = onCompress,
-                onDelete = onDelete,
-            )
+
+            Box {
+                IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(48.dp)) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = stringResource(R.string.action_more),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                SongActionMenu(
+                    expanded = menuOpen,
+                    onDismiss = { menuOpen = false },
+                    onAddToPlaylist = onAddToPlaylist,
+                    onManageTags = onManageTags,
+                    onEditMetadata = onEditMetadata,
+                    onLike = onLike,
+                    onDislike = onDislike,
+                    onCompress = onCompress,
+                    onDelete = onDelete,
+                )
+            }
+        }
         }
     }
 }

@@ -25,6 +25,28 @@ data class ReorderOutcome(
     val error: ReorderError? = null,
 )
 
+enum class FolderOpError {
+    NotFound,
+    CrossLibrary,
+    InvalidDestination,
+    MoveFailed,
+}
+
+data class FolderMoveOutcome(
+    val movedTracks: List<MovedTrack> = emptyList(),
+    val movedFolder: Boolean = false,
+    val error: FolderOpError? = null,
+)
+
+data class FolderExplodeOutcome(
+    val movedTracks: List<MovedTrack> = emptyList(),
+    val movedChildren: Int = 0,
+    val skipped: Int = 0,
+    val failed: Int = 0,
+    val deleted: Boolean = false,
+    val error: FolderOpError? = null,
+)
+
 /** One granted library tree: its root document, visible path and directory cache. */
 private class LibraryContext(
     val root: Uri,
@@ -144,6 +166,165 @@ object FolderReorder {
             alreadySorted = alreadySorted,
             missingArtist = missingArtist,
             failed = failed,
+        )
+    }
+
+    /**
+     * Moves a whole folder below another folder in the same library tree.
+     *
+     * SAF exposes this as `moveDocument`; the provider keeps the folder and its contents
+     * together. The returned mappings let the caller re-key every song inside it.
+     */
+    suspend fun moveFolder(
+        context: Context,
+        folderPath: String,
+        destinationPath: String,
+        folderTracks: List<Track>,
+        destinationTracks: List<Track>,
+    ): FolderMoveOutcome = withContext(Dispatchers.IO) {
+        val source = folderPath.trim('/')
+        val destination = destinationPath.trim('/')
+        if (source.isEmpty() || destination.isEmpty()) {
+            return@withContext FolderMoveOutcome(error = FolderOpError.NotFound)
+        }
+        if (samePath(source, destination) || isInside(destination, source)) {
+            return@withContext FolderMoveOutcome(error = FolderOpError.InvalidDestination)
+        }
+        if (samePath(destination, source.substringBeforeLast('/', ""))) {
+            return@withContext FolderMoveOutcome(error = FolderOpError.InvalidDestination)
+        }
+
+        val sourceTrack = folderTracks.firstOrNull()
+            ?: return@withContext FolderMoveOutcome(error = FolderOpError.NotFound)
+        val destinationTrack = destinationTracks.firstOrNull()
+            ?: return@withContext FolderMoveOutcome(error = FolderOpError.NotFound)
+        val sourceTree = treeId(sourceTrack.uri)
+        val destinationTree = treeId(destinationTrack.uri)
+        if (sourceTree == null || destinationTree == null || sourceTree != destinationTree) {
+            return@withContext FolderMoveOutcome(error = FolderOpError.CrossLibrary)
+        }
+
+        val sourceUri = folderUriFor(sourceTrack, source)
+            ?: return@withContext FolderMoveOutcome(error = FolderOpError.NotFound)
+        val destinationUri = folderUriFor(destinationTrack, destination)
+            ?: return@withContext FolderMoveOutcome(error = FolderOpError.NotFound)
+        if (!isDirectory(context, sourceUri) || !isDirectory(context, destinationUri)) {
+            return@withContext FolderMoveOutcome(error = FolderOpError.NotFound)
+        }
+        val sourceParent = parentDocumentUri(sourceUri)
+            ?: return@withContext FolderMoveOutcome(error = FolderOpError.InvalidDestination)
+        if (destinationUri == sourceParent) {
+            return@withContext FolderMoveOutcome(error = FolderOpError.InvalidDestination)
+        }
+
+        val moved = runCatching {
+            DocumentsContract.moveDocument(
+                context.contentResolver,
+                sourceUri,
+                sourceParent,
+                destinationUri,
+            )
+        }.getOrNull()
+        if (moved == null || moved == sourceUri) {
+            return@withContext FolderMoveOutcome(error = FolderOpError.MoveFailed)
+        }
+
+        val movedFolderId = runCatching { DocumentsContract.getDocumentId(moved) }
+            .getOrNull() ?: return@withContext FolderMoveOutcome(error = FolderOpError.MoveFailed)
+        val movedTracks = folderTracks.mapNotNull { track ->
+            val relative = relativePathBelow(track, source) ?: return@mapNotNull null
+            val newUri = runCatching {
+                DocumentsContract.buildDocumentUriUsingTree(moved, "$movedFolderId/$relative")
+            }.getOrNull() ?: return@mapNotNull null
+            MovedTrack(track.uri, newUri)
+        }
+
+        FolderMoveOutcome(movedTracks = movedTracks, movedFolder = true)
+    }
+
+    /**
+     * Moves every child of a folder into its parent, skipping names that already exist
+     * there. The folder itself is deleted only when nothing was left behind.
+     */
+    suspend fun explodeFolder(
+        context: Context,
+        folderPath: String,
+        folderTracks: List<Track>,
+    ): FolderExplodeOutcome = withContext(Dispatchers.IO) {
+        val source = folderPath.trim('/')
+        if (source.isEmpty()) {
+            return@withContext FolderExplodeOutcome(error = FolderOpError.NotFound)
+        }
+        val sourceTrack = folderTracks.firstOrNull()
+            ?: return@withContext FolderExplodeOutcome(error = FolderOpError.NotFound)
+        val sourceUri = folderUriFor(sourceTrack, source)
+            ?: return@withContext FolderExplodeOutcome(error = FolderOpError.NotFound)
+        val parentUri = parentDocumentUri(sourceUri)
+            ?: return@withContext FolderExplodeOutcome(error = FolderOpError.InvalidDestination)
+        val sourceChildren = children(context, sourceUri)
+            ?: return@withContext FolderExplodeOutcome(error = FolderOpError.MoveFailed)
+        val parentChildren = children(context, parentUri)
+            ?: return@withContext FolderExplodeOutcome(error = FolderOpError.MoveFailed)
+
+        val movedChildren = linkedMapOf<String, Uri>()
+        var skipped = 0
+        var failed = 0
+        val parentNames = parentChildren.mapTo(mutableSetOf()) { normalizedPath(it.name).lowercase() }
+
+        sourceChildren.forEach { child ->
+            if (normalizedPath(child.name).lowercase() in parentNames) {
+                skipped++
+                return@forEach
+            }
+            val moved = if (child.isDirectory) {
+                runCatching {
+                    DocumentsContract.moveDocument(
+                        context.contentResolver,
+                        child.uri,
+                        sourceUri,
+                        parentUri,
+                    )
+                }.getOrNull()
+            } else {
+                moveTrack(context, child.uri, parentUri)
+            }
+            if (moved == null || moved == child.uri) {
+                failed++
+            } else {
+                movedChildren[child.name] = moved
+                parentNames += normalizedPath(child.name).lowercase()
+            }
+        }
+
+        val movedTracks = folderTracks.mapNotNull { track ->
+            val relative = relativePathBelow(track, source) ?: return@mapNotNull null
+            val parts = relative.split('/')
+            val childName = parts.firstOrNull() ?: return@mapNotNull null
+            val newChild = movedChildren[childName] ?: return@mapNotNull null
+            if (parts.size == 1) {
+                MovedTrack(track.uri, newChild)
+            } else {
+                val childId = runCatching { DocumentsContract.getDocumentId(newChild) }
+                    .getOrNull() ?: return@mapNotNull null
+                val rest = parts.drop(1).joinToString("/")
+                val newUri = runCatching {
+                    DocumentsContract.buildDocumentUriUsingTree(newChild, "$childId/$rest")
+                }.getOrNull() ?: return@mapNotNull null
+                MovedTrack(track.uri, newUri)
+            }
+        }
+
+        val remaining = children(context, sourceUri)
+        val deleted = remaining != null && remaining.isEmpty() && runCatching {
+            DocumentsContract.deleteDocument(context.contentResolver, sourceUri)
+        }.getOrDefault(false)
+
+        FolderExplodeOutcome(
+            movedTracks = movedTracks,
+            movedChildren = movedChildren.size,
+            skipped = skipped,
+            failed = failed,
+            deleted = deleted,
         )
     }
 
@@ -305,6 +486,66 @@ object FolderReorder {
             runCatching { DocumentsContract.deleteDocument(resolver, target) }
             return null
         }
+    }
+
+    /**
+     * A folder's own URI, derived from a track inside it.
+     *
+     * The same construction as the old selected-folder resolution: remove the path
+     * between the track and the selected folder from the track's document id.
+     */
+    private fun folderUriFor(track: Track, folderPath: String): Uri? {
+        val folder = track.folder.trim('/')
+        val selected = folderPath.trim('/')
+        if (selected.isEmpty()) return null
+
+        val below = when {
+            folder.equals(selected, ignoreCase = true) -> ""
+            folder.length > selected.length &&
+                folder.regionMatches(0, selected, 0, selected.length, ignoreCase = true) &&
+                folder[selected.length] == '/' -> folder.substring(selected.length + 1)
+            else -> return null
+        }
+        val depth = below.split('/').count { it.isNotBlank() }
+
+        val documentId = runCatching { DocumentsContract.getDocumentId(track.uri) }.getOrNull()
+            ?: return null
+        val volume = documentId.substringBefore(':', "")
+        val path = documentId.substringAfter(':', documentId)
+        val parts = path.split('/').filter { it.isNotEmpty() }
+        if (parts.size <= depth + 1) return null
+        val folderId = parts.dropLast(depth + 1).joinToString("/")
+        if (folderId.isEmpty()) return null
+
+        val id = if (volume.isNotEmpty()) "$volume:$folderId" else folderId
+        return runCatching {
+            DocumentsContract.buildDocumentUriUsingTree(track.uri, id)
+        }.getOrNull()
+    }
+
+    /** The track's path below [folderPath], including its file name. */
+    private fun relativePathBelow(track: Track, folderPath: String): String? {
+        val folder = track.folder.trim('/')
+        val selected = folderPath.trim('/')
+        val relativeFolder = when {
+            folder.equals(selected, ignoreCase = true) -> ""
+            folder.length > selected.length &&
+                folder.regionMatches(0, selected, 0, selected.length, ignoreCase = true) &&
+                folder[selected.length] == '/' -> folder.substring(selected.length + 1)
+            else -> return null
+        }
+        val name = songFileInfo(track.uri).name
+        return if (relativeFolder.isEmpty()) name else "$relativeFolder/$name"
+    }
+
+    private fun treeId(uri: Uri): String? =
+        runCatching { DocumentsContract.getTreeDocumentId(uri) }.getOrNull()
+
+    private fun isInside(path: String, folder: String): Boolean {
+        val candidate = normalizedPath(path)
+        val base = normalizedPath(folder)
+        return candidate.equals(base, ignoreCase = true) ||
+            candidate.startsWith("$base/", ignoreCase = true)
     }
 
     private fun parentDocumentUri(uri: Uri): Uri? {

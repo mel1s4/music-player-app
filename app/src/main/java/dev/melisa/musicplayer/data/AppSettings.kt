@@ -15,7 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.os.LocaleListCompat
 import java.util.Locale
 
-enum class ThemeMode { Light, Dark }
+enum class ThemeMode { System, Light, Dark }
 
 enum class HoldingHand { Left, Right }
 
@@ -44,9 +44,7 @@ class AppSettings(context: Context) {
     private val prefs: SharedPreferences =
         appContext.getSharedPreferences("settings", Context.MODE_PRIVATE)
 
-    var themeMode by mutableStateOf(
-        if (prefs.getBoolean(KEY_DARK, true)) ThemeMode.Dark else ThemeMode.Light,
-    )
+    var themeMode by mutableStateOf(readThemeMode())
         private set
 
     var hand by mutableStateOf(
@@ -78,11 +76,28 @@ class AppSettings(context: Context) {
     var appIcon by mutableStateOf(AppIcon.fromId(prefs.getString(KEY_APP_ICON, null)))
         private set
 
-    val isDark: Boolean get() = themeMode == ThemeMode.Dark
+    /** Resolves the saved choice against the device setting for [ThemeMode.System]. */
+    fun isDark(systemDark: Boolean): Boolean = when (themeMode) {
+        ThemeMode.Light -> false
+        ThemeMode.Dark -> true
+        ThemeMode.System -> systemDark
+    }
 
     fun updateThemeMode(mode: ThemeMode) {
         themeMode = mode
-        prefs.edit().putBoolean(KEY_DARK, mode == ThemeMode.Dark).apply()
+        prefs.edit().putString(KEY_THEME, mode.name).apply()
+    }
+
+    /**
+     * The saved mode, falling back to the legacy dark boolean for installs that
+     * predate the three-way selector.
+     */
+    private fun readThemeMode(): ThemeMode {
+        val stored = prefs.getString(KEY_THEME, null)
+        if (stored != null) {
+            ThemeMode.entries.firstOrNull { it.name == stored }?.let { return it }
+        }
+        return if (prefs.getBoolean(KEY_DARK, true)) ThemeMode.Dark else ThemeMode.Light
     }
 
     fun updateHand(value: HoldingHand) {
@@ -173,6 +188,7 @@ class AppSettings(context: Context) {
             ?: emptyList()
 
     companion object {
+        private const val KEY_THEME = "theme_mode"
         private const val KEY_DARK = "theme_dark"
         private const val KEY_RIGHT_HAND = "right_hand"
         private const val KEY_SCAN_ON_LAUNCH = "scan_on_launch"

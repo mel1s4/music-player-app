@@ -27,6 +27,7 @@
     <string name="settings_theme">Tema</string>
     <string name="theme_light">Claro</string>
     <string name="theme_dark">Oscuro</string>
+    <string name="theme_system">Sistema</string>
     <string name="settings_language">Idioma</string>
     <string name="settings_holding_hand">Mano dominante</string>
     <string name="settings_holding_hand_hint">Coloca los controles en el lado con el que sostienes el teléfono.</string>
@@ -53,6 +54,7 @@
     <string name="min_android_value">Android 8.0 (API 26)</string>
     <string name="songs_no_library_title">Aún no hay bibliotecas</string>
     <string name="songs_no_library_body">Añade una carpeta en Ajustes para empezar.</string>
+    <string name="scanning_short">Escaneando…</string>
     <string name="songs_scanning">Escaneando tus carpetas…</string>
     <string name="action_play">Reproducir</string>
     <string name="action_pause">Pausar</string>
@@ -73,6 +75,7 @@
     <string name="action_create">Crear</string>
     <string name="action_cancel">Cancelar</string>
     <string name="tags_title">Etiquetas</string>
+    <string name="tags_frequent">Usadas con frecuencia</string>
     <string name="tags_empty">Aún no hay etiquetas.</string>
     <string name="tags_hint">Añadir etiqueta</string>
     <string name="action_add">Añadir</string>
@@ -118,12 +121,68 @@
     <string name="metadata_rename_failed">No se pudo renombrar el archivo.</string>
     <string name="nav_files">Archivos</string>
     <string name="files_all">Todas las carpetas</string>
+    <string name="collections_star">Destacar</string>
+    <string name="collections_unstar">Quitar de destacadas</string>
+    <string name="collections_starred">Destacadas</string>
     <string name="files_starred">Destacadas</string>
     <string name="files_folders">Carpetas</string>
     <string name="files_star">Destacar carpeta</string>
     <string name="files_unstar">Quitar de destacadas</string>
     <string name="files_empty">No hay archivos aquí.</string>
     <string name="files_up">Subir un nivel</string>
+    <!-- Bulk song selection -->
+    <string name="bulk_clear">Quitar selección</string>
+    <string name="bulk_set_artist">Definir artista</string>
+    <string name="bulk_set_album">Definir álbum</string>
+    <string name="bulk_set_tags">Definir etiquetas</string>
+    <string name="bulk_set_artist_title">Definir artista</string>
+    <string name="bulk_set_album_title">Definir álbum</string>
+    <string name="bulk_tags_empty">Ninguna etiqueta es común a todas las canciones seleccionadas.</string>
+    <string name="bulk_updating_title">Actualizando canciones</string>
+    <string name="bulk_updating_progress">%1$d de %2$d</string>
+    <string name="bulk_result_title">Acción en lote</string>
+    <string name="action_continue">Continuar</string>
+    <plurals name="bulk_selected">
+        <item quantity="one">%d seleccionada</item>
+        <item quantity="many">%d seleccionadas</item>
+        <item quantity="other">%d seleccionadas</item>
+    </plurals>
+    <plurals name="bulk_apply_to">
+        <item quantity="one">Se aplica a %d canción</item>
+        <item quantity="many">Se aplica a %d canciones</item>
+        <item quantity="other">Se aplica a %d canciones</item>
+    </plurals>
+    <plurals name="bulk_tags_title">
+        <item quantity="one">Etiquetas de %d canción</item>
+        <item quantity="many">Etiquetas de %d canciones</item>
+        <item quantity="other">Etiquetas de %d canciones</item>
+    </plurals>
+    <plurals name="bulk_tags_note">
+        <item quantity="one">Los cambios se aplican a la canción seleccionada.</item>
+        <item quantity="many">Los cambios se aplican a las %d canciones seleccionadas.</item>
+        <item quantity="other">Los cambios se aplican a las %d canciones seleccionadas.</item>
+    </plurals>
+    <plurals name="bulk_compress_confirm">
+        <item quantity="one">¿Elegir una tasa de bits para esta canción? El original se conserva hasta verificar el archivo nuevo.</item>
+        <item quantity="many">¿Elegir una tasa de bits para estas %d canciones? Los originales se conservan hasta verificar cada archivo nuevo.</item>
+        <item quantity="other">¿Elegir una tasa de bits para estas %d canciones? Los originales se conservan hasta verificar cada archivo nuevo.</item>
+    </plurals>
+    <plurals name="bulk_delete_confirm">
+        <item quantity="one">¿Eliminar este archivo del dispositivo? No se puede deshacer.</item>
+        <item quantity="many">¿Eliminar estos %d archivos del dispositivo? No se puede deshacer.</item>
+        <item quantity="other">¿Eliminar estos %d archivos del dispositivo? No se puede deshacer.</item>
+    </plurals>
+    <plurals name="bulk_metadata_failed">
+        <item quantity="one">No se pudo actualizar %d canción. Puede ser de solo lectura.</item>
+        <item quantity="many">No se pudieron actualizar %d canciones. Pueden ser de solo lectura.</item>
+        <item quantity="other">No se pudieron actualizar %d canciones. Pueden ser de solo lectura.</item>
+    </plurals>
+    <plurals name="bulk_delete_failed">
+        <item quantity="one">No se pudo eliminar %d archivo.</item>
+        <item quantity="many">No se pudieron eliminar %d archivos.</item>
+        <item quantity="other">No se pudieron eliminar %d archivos.</item>
+    </plurals>
+
     <string name="reorder_contents">Reordenar contenido</string>
     <string name="reorder_running_title">Reordenando contenido</string>
     <string name="reorder_running_body">Moviendo canciones a carpetas de artista y álbum…</string>
@@ -138,6 +197,29 @@
         <item quantity="one">Se movió %d canción</item>
         <item quantity="many">Se movieron %d canciones</item>
         <item quantity="other">Se movieron %d canciones</item>
+    </plurals>
+    <string name="files_folder_actions">Acciones de carpeta</string>
+    <string name="reorder_track">Reordenar canción</string>
+    <string name="folder_move">Mover</string>
+    <string name="folder_move_title">Mover «%1$s»</string>
+    <string name="folder_move_none">No hay otras carpetas en esta biblioteca adonde moverla.</string>
+    <string name="folder_move_running">Moviendo carpeta…</string>
+    <string name="folder_explode">Desglosar</string>
+    <string name="folder_explode_title">Desglosar carpeta</string>
+    <string name="folder_explode_confirm">¿Mover todo el contenido de «%1$s» a la carpeta superior y borrar «%1$s» si no queda nada? Los elementos con el mismo nombre se dejan como están.</string>
+    <string name="folder_explode_running">Moviendo el contenido fuera de la carpeta…</string>
+    <string name="folder_op_failed">No se pudo completar la acción. Puede que la carpeta sea de solo lectura o que el destino no se pueda escribir.</string>
+    <string name="folder_explode_partial">%1$s. %2$s, así que la carpeta se conservó.</string>
+    <string name="folder_explode_undeleted">%1$s, pero no se pudo borrar la carpeta.</string>
+    <plurals name="folder_items_moved">
+        <item quantity="one">Se movió %d elemento</item>
+        <item quantity="many">Se movieron %d elementos</item>
+        <item quantity="other">Se movieron %d elementos</item>
+    </plurals>
+    <plurals name="folder_items_blocked">
+        <item quantity="one">No se pudo mover %d elemento</item>
+        <item quantity="many">No se pudieron mover %d elementos</item>
+        <item quantity="other">No se pudieron mover %d elementos</item>
     </plurals>
     <string name="metadata_instant">Se guarda al instante</string>
     <string name="action_like">Me gusta</string>

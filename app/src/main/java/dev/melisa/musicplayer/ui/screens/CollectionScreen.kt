@@ -2,7 +2,6 @@ package dev.melisa.musicplayer.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,8 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
@@ -35,6 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.melisa.musicplayer.R
 import dev.melisa.musicplayer.data.Track
+import dev.melisa.musicplayer.ui.components.ReorderableTrackList
 import dev.melisa.musicplayer.ui.components.SectionKicker
 import dev.melisa.musicplayer.ui.components.SongRow
 
@@ -61,6 +59,7 @@ fun CollectionScreen(
     onDislike: (Track) -> Unit,
     onDelete: (Track) -> Unit,
     onEdit: () -> Unit,
+    onReorder: ((List<Track>) -> Unit)? = null,
 ) {
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
@@ -143,21 +142,26 @@ fun CollectionScreen(
                 }
             }
 
-            LazyColumn(contentPadding = PaddingValues(bottom = 8.dp)) {
-                items(tracks, key = { it.uri.toString() }) { track ->
-                    SongRow(
-                        track = track,
-                        selected = track.uri.toString() == currentTrackUri,
-                        onClick = { onPlay(track, tracks) },
-                        onAddToPlaylist = { onAddToPlaylist(track) },
-                        onManageTags = { onManageTags(track) },
-                        onEditMetadata = { onEditMetadata(track) },
-                        onCompress = { onCompress(track) },
-                        onLike = { onLike(track) },
-                        onDislike = { onDislike(track) },
-                        onDelete = { onDelete(track) },
-                    )
-                }
+            ReorderableTrackList(
+                tracks = tracks,
+                onOrderChanged = { onReorder?.invoke(it) },
+                reorderable = onReorder != null,
+                modifier = Modifier.fillMaxWidth(),
+            ) { index, track, dragHandle ->
+                SongRow(
+                    track = track,
+                    selected = track.uri.toString() == currentTrackUri,
+                    onClick = { onPlay(track, tracks) },
+                    onAddToPlaylist = { onAddToPlaylist(track) },
+                    onManageTags = { onManageTags(track) },
+                    onEditMetadata = { onEditMetadata(track) },
+                    onCompress = { onCompress(track) },
+                    onLike = { onLike(track) },
+                    onDislike = { onDislike(track) },
+                    onDelete = { onDelete(track) },
+                    trackNumber = index + 1,
+                    dragHandle = dragHandle,
+                )
             }
         }
     }

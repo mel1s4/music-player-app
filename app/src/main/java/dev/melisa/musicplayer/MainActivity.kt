@@ -3,6 +3,7 @@ package dev.melisa.musicplayer
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.appcompat.app.AppCompatActivity
@@ -24,8 +25,9 @@ class MainActivity : AppCompatActivity() {
             // Re-apply the chosen launcher alias once the app is alive; the manifest
             // default is not necessarily what the user picked last time.
             LaunchedEffect(settings.appIcon) { settings.applyAppIcon() }
-            MusicPlayerTheme(darkTheme = settings.isDark) {
-                SystemBars(darkTheme = settings.isDark)
+            val darkTheme = settings.isDark(isSystemInDarkTheme())
+            MusicPlayerTheme(darkTheme = darkTheme) {
+                SystemBars(darkTheme = darkTheme)
                 // Cover lookups need the folder grants from anywhere in the UI.
                 CompositionLocalProvider(
                     LocalMusicLibraries provides settings.libraries,

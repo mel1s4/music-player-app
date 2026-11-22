@@ -103,6 +103,7 @@ fun SettingsScreen(
         ) {
             Segmented(
                 options = listOf(
+                    ThemeMode.System to stringResource(R.string.theme_system),
                     ThemeMode.Light to stringResource(R.string.theme_light),
                     ThemeMode.Dark to stringResource(R.string.theme_dark),
                 ),

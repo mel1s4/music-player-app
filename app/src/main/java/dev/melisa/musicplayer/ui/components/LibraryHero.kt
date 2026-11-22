@@ -10,17 +10,24 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -42,6 +49,7 @@ fun LibraryHero(
     albums: Int,
     sizeBytes: Long,
     hours: Double,
+    isScanning: Boolean,
     onRescan: () -> Unit,
     onFreeSpace: () -> Unit,
     modifier: Modifier = Modifier,
@@ -96,7 +104,7 @@ fun LibraryHero(
             val stackedActions = LocalDensity.current.fontScale > 1.15f
             if (stackedActions) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    RescanButton(onRescan, Modifier.fillMaxWidth())
+                    RescanButton(scanning = isScanning, onClick = onRescan, modifier = Modifier.fillMaxWidth())
                     FreeUpSpaceButton(onFreeSpace, Modifier.fillMaxWidth())
                 }
             } else {
@@ -104,7 +112,7 @@ fun LibraryHero(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    RescanButton(onRescan, Modifier.weight(1f))
+                    RescanButton(scanning = isScanning, onClick = onRescan, modifier = Modifier.weight(1f))
                     FreeUpSpaceButton(onFreeSpace, Modifier.weight(1f))
                 }
             }
@@ -129,13 +137,39 @@ private fun formatLibrarySize(bytes: Long, albums: Int): String {
 }
 
 @Composable
-private fun RescanButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun RescanButton(
+    scanning: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // The spinner is the functional cue; the pulsing glow keeps the disabled action
+    // feeling alive rather than simply greyed out. Only compose the animation while a
+    // scan is actually running.
+    val pulse = if (scanning) {
+        val transition = rememberInfiniteTransition(label = "rescan")
+        val value by transition.animateFloat(
+            initialValue = 0.55f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(900),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "rescan-glow",
+        )
+        value
+    } else {
+        1f
+    }
+
     Button(
         onClick = onClick,
+        enabled = !scanning,
         modifier = modifier
             .height(54.dp)
             .neonGlow(
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                MaterialTheme.colorScheme.primary.copy(
+                    alpha = if (scanning) pulse * 0.32f else 0.3f,
+                ),
                 radius = 10.dp,
                 shape = RoundedCornerShape(16.dp),
             ),
@@ -144,15 +178,31 @@ private fun RescanButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
+            disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.55f),
+            disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f),
         ),
     ) {
-        Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(22.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = stringResource(R.string.dashboard_rescan),
-            style = MaterialTheme.typography.labelLarge,
-            maxLines = 1,
-        )
+        if (scanning) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                color = MaterialTheme.colorScheme.onPrimary,
+                strokeWidth = 2.dp,
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.scanning_short),
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+            )
+        } else {
+            Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.dashboard_rescan),
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+            )
+        }
     }
 }
 

@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Hearing
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
@@ -39,6 +41,7 @@ import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.ThumbDown
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -55,6 +58,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -68,11 +73,15 @@ import dev.melisa.musicplayer.data.Track
 import dev.melisa.musicplayer.data.resolveTracks
 import dev.melisa.musicplayer.ui.components.CyberBadge
 import dev.melisa.musicplayer.ui.components.DeletePlaylistDialog
+import dev.melisa.musicplayer.ui.components.LocalSongSelection
 import dev.melisa.musicplayer.ui.components.MessageState
 import dev.melisa.musicplayer.ui.components.NeonPanel
 import dev.melisa.musicplayer.ui.components.SectionKicker
 import dev.melisa.musicplayer.ui.components.PlaylistEditorDialog
+import dev.melisa.musicplayer.ui.components.ReorderableTrackList
+import dev.melisa.musicplayer.ui.components.SongCover
 import dev.melisa.musicplayer.ui.components.formatTime
+import dev.melisa.musicplayer.ui.theme.cyberClick
 import dev.melisa.musicplayer.ui.theme.cyberClick
 
 @Composable
@@ -89,6 +98,7 @@ fun PlaylistsDestination(
     var editorOpen by remember { mutableStateOf(false) }
     var editorTarget by remember { mutableStateOf<Playlist?>(null) }
     var deleteTarget by remember { mutableStateOf<Playlist?>(null) }
+    val songSelection = LocalSongSelection.current
 
     val open = extras.playlists.firstOrNull { it.id == openId }
     val smart = SmartPlaylist.entries.firstOrNull { it.name == openSmart }
@@ -115,7 +125,9 @@ fun PlaylistsDestination(
 
     val tag = openTag
     if (tag != null) {
-        BackHandler { openTag = null }
+        BackHandler {
+            if (songSelection?.active == true) songSelection.clear() else openTag = null
+        }
         TagDetail(
             tag = tag,
             tracks = tracksForTag(tag),
@@ -125,7 +137,9 @@ fun PlaylistsDestination(
             onPlayAll = onPlayAll,
         )
     } else if (smart != null) {
-        BackHandler { openSmart = null }
+        BackHandler {
+            if (songSelection?.active == true) songSelection.clear() else openSmart = null
+        }
         SmartPlaylistDetail(
             list = smart,
             tracks = smartTracks[smart].orEmpty(),
@@ -157,7 +171,9 @@ fun PlaylistsDestination(
             },
         )
     } else {
-        BackHandler { openId = null }
+        BackHandler {
+            if (songSelection?.active == true) songSelection.clear() else openId = null
+        }
         PlaylistDetail(
             playlist = open,
             tracks = tracks,
@@ -170,6 +186,13 @@ fun PlaylistsDestination(
             },
             onDelete = { deleteTarget = open },
             onRemoveTrack = { extras.removeFromPlaylist(open.id, it.uri.toString()) },
+            onReorder = if (open.isDynamic) {
+                null
+            } else {
+                { reordered ->
+                    extras.reorderPlaylist(open.id, reordered.map { it.uri.toString() })
+                }
+            },
             onPlayTrack = onPlayTrack,
             onPlayAll = onPlayAll,
         )
@@ -534,9 +557,11 @@ private fun TagDetail(
             }
             Spacer(Modifier.height(4.dp))
             LazyColumn(contentPadding = PaddingValues(bottom = 12.dp)) {
-                items(tracks, key = { it.uri.toString() }) { track ->
+                itemsIndexed(tracks, key = { _, track -> track.uri.toString() }) { index, track ->
                     PlaylistTrackRow(
                         track = track,
+                        position = index + 1,
+                        dragHandle = null,
                         selected = track.uri.toString() == currentTrackUri,
                         onRemove = null,
                         onClick = { onPlayTrack(track, tracks) },
@@ -679,6 +704,7 @@ private fun PlaylistDetail(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onRemoveTrack: (Track) -> Unit,
+    onReorder: ((List<Track>) -> Unit)?,
     onPlayTrack: (Track, List<Track>) -> Unit,
     onPlayAll: (List<Track>, Boolean) -> Unit,
 ) {
@@ -696,6 +722,7 @@ private fun PlaylistDetail(
         onDelete = onDelete,
         // A dynamic playlist has no stored members: remove the tag instead.
         onRemoveTrack = if (playlist.isDynamic) null else onRemoveTrack,
+        onReorder = onReorder,
         onPlayTrack = onPlayTrack,
         onPlayAll = onPlayAll,
     )
@@ -723,6 +750,7 @@ private fun SmartPlaylistDetail(
         onEdit = null,
         onDelete = null,
         onRemoveTrack = null,
+        onReorder = null,
         onPlayTrack = onPlayTrack,
         onPlayAll = onPlayAll,
     )
@@ -744,6 +772,7 @@ private fun TrackListDetail(
     onEdit: (() -> Unit)?,
     onDelete: (() -> Unit)?,
     onRemoveTrack: ((Track) -> Unit)?,
+    onReorder: ((List<Track>) -> Unit)? = null,
     onPlayTrack: (Track, List<Track>) -> Unit,
     onPlayAll: (List<Track>, Boolean) -> Unit,
 ) {
@@ -853,15 +882,20 @@ private fun TrackListDetail(
                 )
             }
         } else {
-            LazyColumn(contentPadding = PaddingValues(bottom = 8.dp)) {
-                items(tracks, key = { it.uri.toString() }) { track ->
-                    PlaylistTrackRow(
-                        track = track,
-                        selected = track.uri.toString() == currentTrackUri,
-                        onRemove = onRemoveTrack?.let { remove -> ({ remove(track) }) },
-                        onClick = { onPlayTrack(track, tracks) },
-                    )
-                }
+            ReorderableTrackList(
+                tracks = tracks,
+                onOrderChanged = { onReorder?.invoke(it) },
+                reorderable = onReorder != null,
+                modifier = Modifier.fillMaxWidth(),
+            ) { index, track, dragHandle ->
+                PlaylistTrackRow(
+                    track = track,
+                    position = index + 1,
+                    dragHandle = dragHandle,
+                    selected = track.uri.toString() == currentTrackUri,
+                    onRemove = onRemoveTrack?.let { remove -> ({ remove(track) }) },
+                    onClick = { onPlayTrack(track, tracks) },
+                )
             }
         }
     }
@@ -870,22 +904,82 @@ private fun TrackListDetail(
 @Composable
 private fun PlaylistTrackRow(
     track: Track,
+    position: Int,
+    dragHandle: Modifier?,
     selected: Boolean,
     onRemove: (() -> Unit)?,
     onClick: () -> Unit,
 ) {
+    val selection = LocalSongSelection.current
+    val selecting = selection?.active == true
+    val bulkSelected = selection?.isSelected(track.uri.toString()) == true
+    val highlighted = selected || bulkSelected
+    val haptics = LocalHapticFeedback.current
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(start = 20.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+            .background(
+                if (highlighted) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.09f)
+                } else {
+                    Color.Transparent
+                },
+            )
+            .padding(start = 8.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        Row(
+            modifier = Modifier.width(if (dragHandle != null) 62.dp else 26.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = position.toString(),
+                modifier = Modifier.width(18.dp),
+                textAlign = TextAlign.End,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (dragHandle != null) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .then(dragHandle),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.DragHandle,
+                        contentDescription = stringResource(R.string.reorder_track),
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .heightIn(min = 60.dp)
+                .cyberClick(
+                    onClick = {
+                        if (selecting) selection?.toggle(track) else onClick()
+                    },
+                    onLongClick = {
+                        if (selection != null) {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            if (selecting) selection.toggle(track) else selection.start(track)
+                        }
+                    },
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SongCover(track = track, side = 44.dp, playing = selected)
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = track.title,
                 style = MaterialTheme.typography.bodyLarge,
-                color = if (selected) {
+                color = if (highlighted) {
                     MaterialTheme.colorScheme.primary
                 } else {
                     MaterialTheme.colorScheme.onSurface
@@ -906,22 +1000,31 @@ private fun PlaylistTrackRow(
                 )
             }
         }
-        Text(
-            text = formatTime(track.durationMs),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        if (onRemove != null) {
-            IconButton(onClick = onRemove) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = stringResource(R.string.playlist_remove_track),
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+        if (selecting) {
+            Checkbox(
+                checked = bulkSelected,
+                onCheckedChange = { selection?.toggle(track) },
+                modifier = Modifier.padding(end = 4.dp),
+            )
         } else {
-            Spacer(Modifier.width(12.dp))
+            Text(
+                text = formatTime(track.durationMs),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (onRemove != null) {
+                IconButton(onClick = onRemove) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = stringResource(R.string.playlist_remove_track),
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                Spacer(Modifier.width(12.dp))
+            }
+        }
         }
     }
 }

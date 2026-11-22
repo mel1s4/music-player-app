@@ -1,5 +1,6 @@
 package dev.melisa.musicplayer.ui.screens
 
+import android.provider.DocumentsContract
 import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -19,32 +20,36 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -52,13 +57,20 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.melisa.musicplayer.R
 import dev.melisa.musicplayer.data.Track
+import dev.melisa.musicplayer.ui.components.AlphabetRail
 import dev.melisa.musicplayer.ui.components.CyberBadge
 import dev.melisa.musicplayer.ui.components.MessageState
 import dev.melisa.musicplayer.ui.components.ScanningState
 import dev.melisa.musicplayer.ui.components.SectionKicker
 import dev.melisa.musicplayer.ui.components.SongRow
+import dev.melisa.musicplayer.ui.components.TrackSort
+import dev.melisa.musicplayer.ui.components.TrackSortButton
+import dev.melisa.musicplayer.ui.components.labelRes
+import dev.melisa.musicplayer.ui.components.sectionLabelFor
+import dev.melisa.musicplayer.ui.components.sortKey
 import dev.melisa.musicplayer.ui.theme.Cyber
 import dev.melisa.musicplayer.ui.theme.cyberClick
+import kotlinx.coroutines.launch
 
 /**
  * Folder navigation over the scanned tracks.
@@ -72,8 +84,11 @@ fun FilesScreen(
     currentTrackUri: String?,
     hasLibraries: Boolean,
     starredFolders: Set<String>,
+    addedAt: Map<String, Long>,
     onToggleFolderStar: (String) -> Unit,
     onReorderFolder: (String, List<Track>) -> Unit,
+    onMoveFolder: (source: String, destination: String, tracks: List<Track>, destinationTracks: List<Track>) -> Unit,
+    onExplodeFolder: (path: String, tracks: List<Track>) -> Unit,
     onPlay: (Track, List<Track>) -> Unit,
     onAddToPlaylist: (Track) -> Unit,
     onManageTags: (Track) -> Unit,
@@ -111,16 +126,39 @@ fun FilesScreen(
                 }
             }
             val node = resolvedNode ?: root
-            val folders = node.children.values.sortedBy { it.name.lowercase() }
-            val folderTracks = node.tracks.sortedBy { it.title.lowercase() }
+            var sort by rememberSaveable { mutableStateOf(TrackSort.Title) }
+            val folderComparator = remember(sort, addedAt) {
+                when (sort) {
+                    TrackSort.DateAdded -> compareByDescending<FolderNode> { folder ->
+                        folder.allTracks().maxOfOrNull {
+                            addedAt[it.uri.toString()] ?: 0L
+                        } ?: 0L
+                    }.thenBy { it.name.lowercase() }
+
+                    TrackSort.Title, TrackSort.Artist -> compareBy { it.name.lowercase() }
+
+                    TrackSort.Duration -> compareBy<FolderNode> { folder ->
+                        folder.allTracks().sumOf { it.durationMs }
+                    }.thenBy { it.name.lowercase() }
+                }
+            }
+            val folders = remember(node, sort, addedAt) {
+                node.children.values.sortedWith(folderComparator)
+            }
+            val folderTracks = remember(node.tracks, sort, addedAt) {
+                sortTracks(node.tracks, sort, addedAt)
+            }
+            val playQueue = remember(node, sort, addedAt) {
+                sortTracks(node.allTracks(), sort, addedAt)
+            }
             val atRoot = path.isEmpty()
 
             // Stars are paths, so they are resolved against the current tree at draw
             // time. A folder that moved or disappeared simply drops out of the section.
-            val starredNodes = remember(root, starredFolders) {
+            val starredNodes = remember(root, starredFolders, sort, addedAt) {
                 starredFolders
                     .mapNotNull { starredPath -> root.find(starredPath)?.let { starredPath to it } }
-                    .sortedBy { (starredPath, _) -> starredPath.lowercase() }
+                    .sortedWith(compareBy(folderComparator) { (_, node) -> node })
             }
             // At the root a starred folder moves into the pinned section; deeper down
             // the normal listing stays untouched so nothing appears twice.
@@ -128,6 +166,89 @@ fun FilesScreen(
                 folders.filterNot { it.path in starredFolders }
             } else {
                 folders
+            }
+
+            val listState = rememberLazyListState()
+            val scope = rememberCoroutineScope()
+            val alphabetical = sort == TrackSort.Title || sort == TrackSort.Artist
+            val showStarred = atRoot && starredNodes.isNotEmpty()
+            val showFoldersHeader = showStarred && listedFolders.isNotEmpty()
+            val starredRowStart = if (showStarred) 1 else 0
+            val folderRowStart = starredRowStart +
+                (if (showStarred) starredNodes.size else 0) +
+                (if (showFoldersHeader) 1 else 0)
+            val trackRowStart = folderRowStart + listedFolders.size
+
+            val letterStarts = remember(
+                alphabetical,
+                sort,
+                starredNodes,
+                listedFolders,
+                folderTracks,
+                starredRowStart,
+                folderRowStart,
+                trackRowStart,
+            ) {
+                if (!alphabetical) {
+                    emptyMap()
+                } else {
+                    val starts = mutableMapOf<String, Int>()
+                    fun add(label: String, index: Int) {
+                        starts[label] = minOf(starts[label] ?: index, index)
+                    }
+                    if (showStarred) {
+                        starredNodes.forEachIndexed { index, (_, folder) ->
+                            add(sectionLabelFor(folder.name), starredRowStart + index)
+                        }
+                    }
+                    listedFolders.forEachIndexed { index, folder ->
+                        add(sectionLabelFor(folder.name), folderRowStart + index)
+                    }
+                    folderTracks.forEachIndexed { index, track ->
+                        val key = if (sort == TrackSort.Artist) {
+                            track.artist.orEmpty().ifBlank { track.title }
+                        } else {
+                            track.title
+                        }
+                        add(sectionLabelFor(key), trackRowStart + index)
+                    }
+                    starts.toMap()
+                }
+            }
+            val letters = remember(letterStarts) {
+                letterStarts.keys.sortedWith(compareBy({ it == "#" }, { it }))
+            }
+            val currentLetter by remember(letterStarts, letters) {
+                derivedStateOf {
+                    val first = listState.firstVisibleItemIndex
+                    letters.lastOrNull { letter ->
+                        (letterStarts[letter] ?: Int.MAX_VALUE) <= first
+                    }
+                }
+            }
+            val showIndex = alphabetical && letters.size > 2
+            LaunchedEffect(sort) { listState.scrollToItem(0) }
+
+            var moveSource by remember { mutableStateOf<FolderNode?>(null) }
+            var explodeSource by remember { mutableStateOf<FolderNode?>(null) }
+            // Only offer folders in the same granted tree, never a descendant of the
+            // folder being moved, and never the parent it already lives in.
+            val moveCandidates = remember(root, moveSource) {
+                val source = moveSource ?: return@remember emptyList()
+                val sourceTree = source.treeId()
+                val parentPath = source.path.substringBeforeLast('/', "")
+                if (sourceTree == null) {
+                    emptyList()
+                } else {
+                    root.allFolders()
+                        .filter { candidate ->
+                            candidate.path != source.path &&
+                                !candidate.path.startsWith("${source.path}/", ignoreCase = true) &&
+                                candidate.path != parentPath &&
+                                candidate.treeId() == sourceTree
+                        }
+                        .sortedBy { it.path.lowercase() }
+                }
             }
 
             Column(modifier = Modifier.fillMaxSize()) {
@@ -145,7 +266,26 @@ fun FilesScreen(
                         icon = Icons.Filled.Folder,
                     )
                 } else {
-                    LazyColumn(contentPadding = PaddingValues(bottom = 8.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 18.dp, end = 8.dp, top = 4.dp, bottom = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        SectionKicker(text = stringResource(sort.labelRes()))
+                        Spacer(Modifier.width(8.dp))
+                        CyberBadge(text = (starredNodes.size + listedFolders.size + folderTracks.size).toString())
+                        Spacer(Modifier.weight(1f))
+                        TrackSortButton(sort = sort, onSort = { sort = it })
+                    }
+                    Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(end = if (showIndex) 24.dp else 0.dp),
+                        contentPadding = PaddingValues(bottom = 8.dp),
+                    ) {
                         if (atRoot && starredNodes.isNotEmpty()) {
                             item(key = "starred-header") {
                                 FolderSectionHeader(
@@ -168,6 +308,8 @@ fun FilesScreen(
                                     onReorder = {
                                         onReorderFolder(starredNode.path, starredNode.allTracks())
                                     },
+                                    onMove = { moveSource = starredNode },
+                                    onExplode = { explodeSource = starredNode },
                                 )
                             }
                             if (listedFolders.isNotEmpty()) {
@@ -189,6 +331,8 @@ fun FilesScreen(
                                 onReorder = {
                                     onReorderFolder(folder.path, folder.allTracks())
                                 },
+                                onMove = { moveSource = folder },
+                                onExplode = { explodeSource = folder },
                             )
                         }
                         items(folderTracks, key = { it.uri.toString() }) { track ->
@@ -196,7 +340,7 @@ fun FilesScreen(
                                 track = track,
                                 selected = track.uri.toString() == currentTrackUri,
                                 // Playing from a folder queues that folder and everything under it.
-                                onClick = { onPlay(track, node.allTracks()) },
+                                onClick = { onPlay(track, playQueue) },
                                 onAddToPlaylist = { onAddToPlaylist(track) },
                                 onManageTags = { onManageTags(track) },
                                 onEditMetadata = { onEditMetadata(track) },
@@ -207,7 +351,65 @@ fun FilesScreen(
                             )
                         }
                     }
+
+                    if (showIndex) {
+                        AlphabetRail(
+                            letters = letters,
+                            current = currentLetter,
+                            onPick = { letter ->
+                                letterStarts[letter]?.let { index ->
+                                    scope.launch { listState.scrollToItem(index) }
+                                }
+                            },
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(end = 2.dp),
+                        )
+                    }
+                    }
                 }
+            }
+
+            moveSource?.let { source ->
+                MoveFolderDialog(
+                    sourceName = source.name,
+                    candidates = moveCandidates,
+                    onDismiss = { moveSource = null },
+                    onPick = { destination ->
+                        moveSource = null
+                        onMoveFolder(
+                            source.path,
+                            destination.path,
+                            source.allTracks(),
+                            destination.allTracks(),
+                        )
+                    },
+                )
+            }
+
+            explodeSource?.let { source ->
+                AlertDialog(
+                    onDismissRequest = { explodeSource = null },
+                    title = { Text(stringResource(R.string.folder_explode_title)) },
+                    text = {
+                        Text(stringResource(R.string.folder_explode_confirm, source.name))
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                explodeSource = null
+                                onExplodeFolder(source.path, source.allTracks())
+                            },
+                        ) {
+                            Text(stringResource(R.string.folder_explode))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { explodeSource = null }) {
+                            Text(stringResource(R.string.action_cancel))
+                        }
+                    },
+                )
             }
         }
     }
@@ -394,10 +596,11 @@ private fun FolderRow(
     onClick: () -> Unit,
     onToggleStar: () -> Unit,
     onReorder: () -> Unit,
+    onMove: () -> Unit,
+    onExplode: () -> Unit,
     subtitle: String? = null,
 ) {
     val accent = if (starred) Cyber.Amber else MaterialTheme.colorScheme.secondary
-    val haptics = LocalHapticFeedback.current
     var menuOpen by remember { mutableStateOf(false) }
 
     Box {
@@ -405,13 +608,7 @@ private fun FolderRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 72.dp)
-                .cyberClick(
-                    onClick = onClick,
-                    onLongClick = {
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        menuOpen = true
-                    },
-                )
+                .cyberClick(onClick = onClick)
                 .padding(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -446,13 +643,21 @@ private fun FolderRow(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            IconButton(onClick = onToggleStar, modifier = Modifier.size(48.dp)) {
+            IconButton(onClick = onToggleStar, modifier = Modifier.size(44.dp)) {
                 Icon(
                     imageVector = if (starred) Icons.Filled.Star else Icons.Filled.StarBorder,
                     contentDescription = stringResource(
                         if (starred) R.string.files_unstar else R.string.files_star,
                     ),
                     tint = if (starred) Cyber.Amber else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+            IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(44.dp)) {
+                Icon(
+                    imageVector = Icons.Filled.MoreVert,
+                    contentDescription = stringResource(R.string.files_folder_actions),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(22.dp),
                 )
             }
@@ -474,9 +679,101 @@ private fun FolderRow(
                     onReorder()
                 },
             )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.folder_move)) },
+                onClick = {
+                    menuOpen = false
+                    onMove()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.folder_explode)) },
+                onClick = {
+                    menuOpen = false
+                    onExplode()
+                },
+            )
         }
     }
 }
+
+private fun sortTracks(
+    tracks: List<Track>,
+    sort: TrackSort,
+    addedAt: Map<String, Long>,
+): List<Track> = when (sort) {
+    TrackSort.DateAdded -> tracks.sortedWith(
+        compareByDescending<Track> { addedAt[it.uri.toString()] ?: 0L }
+            .thenBy { sortKey(it.title) },
+    )
+    TrackSort.Title -> tracks.sortedBy { sortKey(it.title) }
+    TrackSort.Artist -> tracks.sortedWith(
+        compareBy({ sortKey(it.artist.orEmpty()) }, { sortKey(it.title) }),
+    )
+    TrackSort.Duration -> tracks.sortedWith(
+        compareBy<Track> { it.durationMs }.thenBy { sortKey(it.title) },
+    )
+}
+
+@Composable
+private fun MoveFolderDialog(
+    sourceName: String,
+    candidates: List<FolderNode>,
+    onDismiss: () -> Unit,
+    onPick: (FolderNode) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.folder_move_title, sourceName)) },
+        text = {
+            if (candidates.isEmpty()) {
+                Text(stringResource(R.string.folder_move_none))
+            } else {
+                LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
+                    items(candidates, key = { it.path }) { candidate ->
+                        TextButton(
+                            onClick = { onPick(candidate) },
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        ) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    text = candidate.name,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                Text(
+                                    text = candidate.path,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_cancel))
+            }
+        },
+    )
+}
+
+private fun FolderNode.allFolders(): List<FolderNode> = buildList {
+    children.values.forEach { child ->
+        add(child)
+        addAll(child.allFolders())
+    }
+}
+
+private fun FolderNode.treeId(): String? =
+    allTracks().firstOrNull()?.uri?.let { uri ->
+        runCatching { DocumentsContract.getTreeDocumentId(uri) }.getOrNull()
+    }
 
 private class FolderNode(val name: String, val path: String) {
     val children = linkedMapOf<String, FolderNode>()

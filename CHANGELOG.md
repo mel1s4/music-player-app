@@ -14,6 +14,64 @@ project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - More library statistics, and a listening-history screen built on the recorded play
   timestamps.
 
+## [0.6.0] - 2026-11-22
+
+This release turns the library into a more complete browsing and editing workspace:
+collections can be starred, every archive shares Songs' ordering tools, search has a
+pull-down gesture, and the player and editors have been tightened around the artwork.
+
+### Added
+
+- **Star albums and artists** from their artwork editors. Starred collections are
+  persisted and pinned in a new collapsible **Starred** section at the top of the Albums
+  and Artists archives, above the alphabetical grid.
+- The song editor now offers the **eight most-used tags across the library** that the
+  current song does not already carry, as one-tap chips; adding one updates the tag list
+  immediately and removes it from the suggestions.
+- **Pull down to search**: at the top of any scrollable page, dragging down reveals the
+  Search page in a finger-linked vertical reveal. Releasing past the threshold commits
+  to Search; a short pull springs back. The top-bar magnifier uses the same animation.
+- **Compress** in the bulk-selection bar of **Most disliked**: select one or more songs
+  and open the existing batch compression sheet without leaving the Dashboard.
+- **Folder actions menu**: every folder in Files now has a kebab menu with **Reorder
+  contents**, **Move** and **Explode**. Move places the whole folder in another folder
+  of the same library; Explode moves the folder's contents into its parent and deletes
+  the folder when nothing is left, skipping names that already exist.
+- **Albums, Artists and Files** now use the same four ordering options as Songs —
+  date added, title, artist and duration — plus the Songs-style alphabetical rail for
+  title/artist orders. Album/artist orders use their tracks' aggregates; Files sorts
+  folders and the songs inside them.
+- **Reorder tracks in albums and manual playlists** by dragging the handle beside the
+  track number. Album pages remember their order across restarts; playlist order is
+  stored in the playlist itself. Smart/dynamic playlists stay read-only.
+- **Long-press bulk selection** on every song row — Songs, Search results, Files,
+  album/artist pages, playlists, tags and smart lists. The shared selection bar can set
+  the artist or album, set tags, add the selection to a playlist, compress it, or delete
+  it. Compress and Delete confirm first; artist/album edits preserve every other tag,
+  and the currently playing file is written without interrupting playback.
+- **System theme** in the three-way **System / Light / Dark** selector. System follows
+  the device's dark-mode setting and updates when the device switches.
+- Focusing the **artist** or **album** field in the metadata editor now scrolls it to the
+  top of the form, so its autocomplete suggestions are visible above the keyboard
+  instead of being hidden below it.
+- Tags in the metadata editor are now **saved by Add/Remove themselves**. The sticky
+  Save button also commits any tag still sitting in the Add field, so typing a tag and
+  saving works in one step without pressing Add first.
+
+### Changed
+
+- Pulling down at the top of the **Edit song** form now performs the same action as the
+  top-left back arrow.
+- The Now Playing **scrubber now sits directly on the lower edge of the cover art**, with
+  a dark scrim keeping the white waveform and time labels readable. The like/dislike
+  controls no longer have a panel background and sit directly on the page.
+- The bottom navigation now mirrors completely with the **dominant hand**. Right-handed:
+  **Dashboard, Playlists, Songs, Menu**. Left-handed: **Menu, Songs, Playlists,
+  Dashboard**.
+- Scanning progress no longer appears as a separate row in the top bar. The **Rescan**
+  button in the Songs library summary now shows a spinner, pulses, and is disabled while
+  a scan runs.
+
 ## [0.5.0] - 2026-11-22
 
 ### Added

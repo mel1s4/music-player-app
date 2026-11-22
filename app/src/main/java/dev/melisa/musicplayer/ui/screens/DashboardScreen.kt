@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Compress
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Folder
@@ -81,6 +82,7 @@ fun DashboardScreen(
     nowPlaying: Track?,
     isPlaying: Boolean,
     onPlay: (Track, List<Track>) -> Unit,
+    onCompress: (List<Track>) -> Unit,
     onOpenSongs: () -> Unit,
     onOpenFiles: () -> Unit,
     onOpenAlbums: () -> Unit,
@@ -328,6 +330,26 @@ fun DashboardScreen(
                                         imageVector = Icons.Filled.RestartAlt,
                                         contentDescription = stringResource(R.string.ratings_reset),
                                         tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+
+                                IconButton(
+                                    enabled = selected.isNotEmpty(),
+                                    onClick = {
+                                        val selection = disliked.filter {
+                                            it.uri.toString() in selected
+                                        }
+                                        if (selection.isNotEmpty()) {
+                                            onCompress(selection)
+                                            bulkMode = false
+                                            selected = emptySet()
+                                        }
+                                    },
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Compress,
+                                        contentDescription = stringResource(R.string.action_compress),
+                                        tint = MaterialTheme.colorScheme.secondary,
                                     )
                                 }
 

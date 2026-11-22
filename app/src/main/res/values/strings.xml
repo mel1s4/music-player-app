@@ -32,6 +32,7 @@
     <string name="settings_theme">Theme</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
+    <string name="theme_system">System</string>
     <string name="settings_language">Language</string>
     <string name="settings_holding_hand">Holding hand</string>
     <string name="settings_holding_hand_hint">Places controls on the side you hold the phone with.</string>
@@ -58,6 +59,7 @@
     <string name="min_android_value">Android 8.0 (API 26)</string>
     <string name="songs_no_library_title">No libraries yet</string>
     <string name="songs_no_library_body">Add a folder in Settings to get started.</string>
+    <string name="scanning_short">Scanning…</string>
     <string name="songs_scanning">Scanning your folders…</string>
     <string name="action_play">Play</string>
     <string name="action_pause">Pause</string>
@@ -78,6 +80,7 @@
     <string name="action_create">Create</string>
     <string name="action_cancel">Cancel</string>
     <string name="tags_title">Tags</string>
+    <string name="tags_frequent">Frequently used</string>
     <string name="tags_empty">No tags yet.</string>
     <string name="tags_hint">Add a tag</string>
     <string name="action_add">Add</string>
@@ -134,12 +137,60 @@
     <string name="metadata_rename_failed">Couldn\'t rename the file.</string>
     <string name="nav_files">Files</string>
     <string name="files_all">All folders</string>
+    <string name="collections_star">Star</string>
+    <string name="collections_unstar">Unstar</string>
+    <string name="collections_starred">Starred</string>
     <string name="files_starred">Starred</string>
     <string name="files_folders">Folders</string>
     <string name="files_star">Star folder</string>
     <string name="files_unstar">Unstar folder</string>
     <string name="files_empty">No files here.</string>
     <string name="files_up">Up one level</string>
+
+    <!-- Bulk song selection -->
+    <string name="bulk_clear">Clear selection</string>
+    <string name="bulk_set_artist">Set artist</string>
+    <string name="bulk_set_album">Set album</string>
+    <string name="bulk_set_tags">Set tags</string>
+    <string name="bulk_set_artist_title">Set artist</string>
+    <string name="bulk_set_album_title">Set album</string>
+    <string name="bulk_tags_empty">No tags are shared by all selected songs yet.</string>
+    <string name="bulk_updating_title">Updating songs</string>
+    <string name="bulk_updating_progress">%1$d of %2$d</string>
+    <string name="bulk_result_title">Bulk action</string>
+    <string name="action_continue">Continue</string>
+    <plurals name="bulk_selected">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
+    <plurals name="bulk_apply_to">
+        <item quantity="one">Applies to %d song</item>
+        <item quantity="other">Applies to %d songs</item>
+    </plurals>
+    <plurals name="bulk_tags_title">
+        <item quantity="one">Tags for %d song</item>
+        <item quantity="other">Tags for %d songs</item>
+    </plurals>
+    <plurals name="bulk_tags_note">
+        <item quantity="one">Changes apply to the selected song.</item>
+        <item quantity="other">Changes apply to all %d selected songs.</item>
+    </plurals>
+    <plurals name="bulk_compress_confirm">
+        <item quantity="one">Choose a bitrate for this song? The original is kept until the new file is verified.</item>
+        <item quantity="other">Choose a bitrate for these %d songs? Originals are kept until each new file is verified.</item>
+    </plurals>
+    <plurals name="bulk_delete_confirm">
+        <item quantity="one">Delete this file from the device? This cannot be undone.</item>
+        <item quantity="other">Delete these %d files from the device? This cannot be undone.</item>
+    </plurals>
+    <plurals name="bulk_metadata_failed">
+        <item quantity="one">Couldn’t update %d song. It may be read-only.</item>
+        <item quantity="other">Couldn’t update %d songs. They may be read-only.</item>
+    </plurals>
+    <plurals name="bulk_delete_failed">
+        <item quantity="one">Couldn’t delete %d file.</item>
+        <item quantity="other">Couldn’t delete %d files.</item>
+    </plurals>
 
     <!-- Folder reorder -->
     <string name="reorder_contents">Reorder contents</string>
@@ -155,6 +206,27 @@
     <plurals name="reorder_moved">
         <item quantity="one">Moved %d song</item>
         <item quantity="other">Moved %d songs</item>
+    </plurals>
+    <string name="files_folder_actions">Folder actions</string>
+    <string name="reorder_track">Reorder track</string>
+    <string name="folder_move">Move</string>
+    <string name="folder_move_title">Move “%1$s”</string>
+    <string name="folder_move_none">There are no other folders in this library to move it into.</string>
+    <string name="folder_move_running">Moving folder…</string>
+    <string name="folder_explode">Explode</string>
+    <string name="folder_explode_title">Explode folder</string>
+    <string name="folder_explode_confirm">Move everything inside “%1$s” to its parent folder, then delete “%1$s” if nothing is left? Existing items with the same name are left alone.</string>
+    <string name="folder_explode_running">Moving contents out of the folder…</string>
+    <string name="folder_op_failed">Couldn’t complete that folder action. It may be read-only, or the destination may not be writable.</string>
+    <string name="folder_explode_partial">%1$s. %2$s, so the folder was kept.</string>
+    <string name="folder_explode_undeleted">%1$s, but the folder itself couldn’t be deleted.</string>
+    <plurals name="folder_items_moved">
+        <item quantity="one">Moved %d item</item>
+        <item quantity="other">Moved %d items</item>
+    </plurals>
+    <plurals name="folder_items_blocked">
+        <item quantity="one">%d item couldn’t be moved</item>
+        <item quantity="other">%d items couldn’t be moved</item>
     </plurals>
     <string name="metadata_instant">Saved immediately</string>
     <string name="action_like">Like</string>

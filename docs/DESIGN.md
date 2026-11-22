@@ -67,8 +67,11 @@ Measured contrasts (WCAG 2.1):
 
 ### Light — "Daylight"
 
-The theme switch still works, because a neon panel becomes a mirror in a bright kitchen.
-It is the same system in daylight: deep green ink on mint paper, no glow effects.
+The theme selector is a three-way **System / Light / Dark** control. System follows the
+device's dark-mode setting and re-applies live when the device switches; Light and Dark
+override it. The light palette still works because a neon panel becomes a mirror in a
+bright kitchen. It is the same system in daylight: deep green ink on mint paper, no glow
+effects.
 
 | Pair | Ratio |
 |---|---|
@@ -152,9 +155,9 @@ that state is false; no decorative animation runs forever on a static screen.
 - Persistent mini player with artwork, title, live equalizer, progress LED bar, play and
   next — controls mirror to the holding hand (`Left` / `Right` in Settings).
 - The progress control is a **waveform**, not a line: rounded bars show the RMS loudness
-  of the decoded audio (72 buckets), the played side fills with accent green and the
-  rest stays muted, and a vertical playhead with a small glow marks the position. Tap or
-  drag anywhere to seek. Long tracks are sampled in 72 short windows so the envelope
+  of the decoded audio (72 buckets), with a vertical playhead and time labels. It sits on
+  the lower edge of the cover art behind a dark scrim, in white so it reads over any
+  artwork. Tap or drag anywhere on the bars to seek. Long tracks are sampled in 72 short windows so the envelope
   arrives quickly; short tracks decode in full, results stay in an in-memory cache, and
   a quiet placeholder keeps the control usable while analysis runs.
 - Swipe the mini player up to open the player. Inside it, swipe **down** on the header
@@ -183,8 +186,9 @@ that state is false; no decorative animation runs forever on a static screen.
   The phrase survives only as the icon's accessibility description. The player shows
   the score once, in that panel — there is no duplicate badge beside the artist; that
   slot belongs to the metadata pencil instead.
-- The rating panel sits at the **top** of the Now Playing sheet, directly under the
-  header and above the artwork, so the score and thumbs are visible without scrolling.
+- The rating controls sit at the **top** of the Now Playing sheet, directly under the
+  header and above the artwork, with no panel background, so the score and thumbs are
+  visible without scrolling.
 - When the current score is negative, two labelled tiles slide in above the thumbs:
   **Delete** (magenta, opens the file-deletion confirmation) and **Compress audio**
   (lime, opens the bitrate picker for that song). They are absent at neutral and
@@ -205,6 +209,9 @@ that state is false; no decorative animation runs forever on a static screen.
   and opens the full player, so a duplicate card above the lists would add nothing.
 - Top-rated and disliked lists now show rank + a tinted thumb, so the rating direction
   is visible instead of a phrase.
+- **Most disliked** has a bulk-selection bar with select-all, reset score, compress and
+  delete. Compress opens the same batch compression sheet as the free-space flow, so
+  several disliked files can be shrunk without leaving the Dashboard.
 - Empty library becomes a real empty state with a route to Settings.
 
 **Songs**
@@ -220,13 +227,16 @@ that state is false; no decorative animation runs forever on a static screen.
   album/artist accent colours, and **recent searches** that can be replayed or cleared.
 
 **Navigation**
-- Bottom bar: **Home, Songs, Playlists, Menu** — Playlists replaced Search, which is a
-  utility, not a destination people return to.
-- Search now lives in the top bar (and in the drawer). On the search screen the same
-  slot becomes a close button and returns to the tab the search was opened from.
+- Bottom bar mirrors with the holding hand. Right-handed: **Home, Playlists, Songs,
+  Menu**; left-handed: **Menu, Songs, Playlists, Home**. Playlists replaced Search,
+  which is a utility, not a destination people return to.
+- Search now lives in the top bar, the drawer, and a pull-down overlay. Dragging down
+  at the top of a scrollable page uncovers Search from the top with progress tied to the
+  finger; releasing past 30% commits, otherwise it springs back. On the search screen
+  the top-bar slot becomes a close button and returns to the page underneath.
 - Drawer opens from the side of the holding hand, marked with a live dot.
 - Back from any side tab returns to Home instead of quitting the app; back from Search
-  returns to where Search was opened.
+  returns to the page underneath it.
 - Switching tabs, opening Search, or picking a drawer destination closes any album or
   artist page open on top of the old tab, so the new content is visible immediately.
   Opening an album from the player closes an open artist page and vice versa: only one
@@ -271,7 +281,21 @@ that state is false; no decorative animation runs forever on a static screen.
   it never appears twice, while deeper stars carry their full path as a subtitle to
   disambiguate same-named folders. Stars are stored by path, resolved against the live
   tree on every draw, so a folder that was moved or deleted simply drops out.
-- Long-pressing a folder opens a small menu with **Reorder contents**. It uses the
+- Albums, artists and Files use the same `TrackSort` menu and `AlphabetRail` as Songs.
+  Collections sort by their aggregate date/duration and primary artist; Files sorts both
+  folder rows and the tracks inside the current folder. Section headers and the rail are
+  only drawn for title/artist orders, where an alphabet exists.
+- Album pages and manual playlists use a shared `ReorderableTrackList`. Each row shows
+  its position and a drag handle before the cover; dragging reorders a local working
+  copy, then commits once on drop. Album order is stored in `album_orders`; manual
+  playlist order rewrites `playlist_tracks`. Smart and dynamic playlists remain read-only.
+- Each folder row has a kebab menu with **Reorder contents**, **Move**, and
+  **Explode**. Move places the folder in another folder of the same granted library;
+  Explode moves every child into the parent, skips names that already exist there, and
+  deletes the folder only when it is empty. Both operations return old/new URI mappings
+  for every affected track so ratings, tags, favourites, history, playlists and the
+  playback queue follow the files.
+- **Reorder contents** uses the
   scanned metadata and moves each song into `artist/album/` (or `artist/` when the
   album is missing) **at the root of the library that contains the folder**, keeping
   the file name. A nested `Downloads` folder therefore merges into the existing
@@ -279,9 +303,21 @@ that state is false; no decorative animation runs forever on a static screen.
   an artist stay put, and files already in the expected folder are skipped. Every move
   re-keys the database and the playback queue, so ratings, tags, favourites, listening
   history, playlist entries and the current playback position survive the new path.
+- Song rows share a `SongSelectionState` through a composition local. A long-press
+  starts a selection, later taps toggle rows, and a bottom bar shows the count plus
+  Set artist, Set album, Set tags, Add to playlist, Compress and Delete. Playlist and
+  smart-list rows opt into the same state, so long-press works everywhere a track is
+  listed.
+- Bulk artist/album edits preserve every other tag. Non-playing files are rewritten
+  immediately; the currently playing file goes through the deferred metadata queue.
+  Tags are added to or removed from the whole selection, playlist additions are
+  idempotent, and Compress/Delete always ask first. The selection bar and dialogs live
+  above the tabs, so navigating away cannot leave an invisible selection behind.
 - In the metadata editor, the artist and album fields keep free text and open a
   height-capped, scrollable autocomplete panel while typing. Exact and prefix matches
-  come first, and a brand-new name is always allowed.
+  come first, and a brand-new name is always allowed. Focusing either field (or opening
+  its arrow) scrolls the form so the input sits at the top of the viewport, leaving the
+  suggestion panel visible between it and the keyboard.
 
 **Edit song**
 - The metadata editor opens with a **file summary**: size in MB, codec and bitrate
@@ -294,6 +330,8 @@ that state is false; no decorative animation runs forever on a static screen.
   fields keep the full width.
 - **Save** is a sticky bottom bar: it sits directly above the keyboard while the form
   scrolls, so the primary action is always in reach.
+- Pulling down while the form is at the top triggers the same close action as the
+  back arrow; a drag that starts lower scrolls normally first.
 - Saving an edit to the **currently playing** song does not rewrite the file under the
   decoder. The app updates its own view immediately, queues the real tag write (and any
   rename) in `pending_meta`, and applies it when playback pauses, the track changes, or
@@ -305,6 +343,11 @@ that state is false; no decorative animation runs forever on a static screen.
 **Collections, playlists & tags**
 - Album and artist indices get section counters and real cover art; artists without a
   portrait show a monogram disc.
+- Album and artist indices get section counters and real cover art; artists without a
+  portrait show a monogram disc. Their artwork editors carry a **star** toggle; starred
+  collections are removed from the alphabetical sections and pinned in a collapsible
+  **Starred** block above them, ordered by the archive's current sort. The block's
+  collapsed state is remembered on the screen.
 - Playlists get a tinted "New playlist" action tile and real cards; empty playlists show
   a proper empty state.
 - **Smart lists** sit directly under that tile: Liked Songs (score above neutral),
@@ -317,6 +360,12 @@ that state is false; no decorative animation runs forever on a static screen.
 - The Listas screen now lists **every tag** as a tinted `#tag` pill with its live song
   count. Tapping a pill **plays every song carrying that tag** and opens the tag's queue
   (with Play all / Shuffle and the song list), so a tag is a one-tap mix, not a filter.
+- In the metadata editor, tag Add and Remove write to the database and the file-sync
+  queue immediately; they are not part of the metadata draft. Above the current tags,
+  the **eight most-used tags** in the library that the song lacks are offered as
+  one-tap chips, so recurring tags do not need to be retyped. The sticky Save action
+  also flushes any text still in the Add field, so a typed-but-unsubmitted tag is never
+  lost when the form is saved.
 - Tags are indexed by inverting the per-track store, merged case-insensitively
   ("Rock" / "rock"), sorted alphabetically, and only shown while at least one current
   track carries them. The section explains itself when empty, with a route to a song's
@@ -385,7 +434,9 @@ Library data lives in its own SQLite database, `library.db`, through
 | `tracks` | first-seen timestamp per URI ("Recently added") |
 | `listens` | play count and last-played timestamp per URI ("Unheard songs") |
 | `pending_meta` | metadata edits waiting for their track to stop playing |
+| `album_orders` | user-defined track order per album name |
 | `starred_folders` | File Explorer folder paths pinned by the user |
+| `starred_collections` | `(kind, name)` pairs for starred albums and artists |
 
 `LibraryExtras` keeps its existing public API and mirrors the database into Compose
 state, writing through on every mutation, so screens did not need to change. Listening
@@ -441,11 +492,11 @@ misses are parsed with four-way parallelism.
 the last completed scan during composition, so the first frame after launch already shows
 the real library instead of a full-screen "Scanning" state. The scan then runs behind it
 and replaces the list in place; a completed scan prunes cache rows for files it no longer
-saw, so deleted tracks never linger in the snapshot. While that refresh runs, a slim amber
-sweep in the top bar reports progress without covering any content — the full scanning
-state only appears on a first run, when there is genuinely nothing cached to paint. A
-rescan keeps the previous list on screen for the same reason, so edits and conversions no
-longer blank the list, search results or the free-space view. Search normalizes each
+saw, so deleted tracks never linger in the snapshot. While that refresh runs, the
+**Rescan** button in the Songs summary shows a spinner, pulses its glow, and is disabled;
+the full scanning state only appears on a first run, when there is genuinely nothing
+cached to paint. A rescan keeps the previous list on screen for the same reason, so edits
+and conversions no longer blank the list, search results or the free-space view. Search normalizes each
 track's fields once per library change instead of on every keystroke.
 
 ### Footprint & hardening

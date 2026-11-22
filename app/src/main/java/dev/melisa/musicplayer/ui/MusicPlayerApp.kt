@@ -13,6 +13,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -57,6 +58,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -65,6 +67,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -80,10 +83,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -114,16 +127,22 @@ import dev.melisa.musicplayer.data.ReorderError
 import dev.melisa.musicplayer.data.SongArt
 import dev.melisa.musicplayer.data.SongFileSync
 import dev.melisa.musicplayer.data.SongMetadata
+import dev.melisa.musicplayer.data.TagEditor
+import dev.melisa.musicplayer.data.TagWriteResult
 import dev.melisa.musicplayer.data.Track
 import dev.melisa.musicplayer.data.deleteSongFile
 import dev.melisa.musicplayer.data.songFileInfo
 import dev.melisa.musicplayer.data.weightedShuffle
 import dev.melisa.musicplayer.playback.PlaybackService
 import dev.melisa.musicplayer.ui.components.AddToPlaylistDialog
+import dev.melisa.musicplayer.ui.components.BulkSelectionBar
+import dev.melisa.musicplayer.ui.components.BulkTagsDialog
+import dev.melisa.musicplayer.ui.components.BulkTextFieldDialog
 import dev.melisa.musicplayer.ui.components.CompressSheet
 import dev.melisa.musicplayer.ui.components.CompressUiState
 import dev.melisa.musicplayer.ui.components.CyberDivider
 import dev.melisa.musicplayer.ui.components.EqualizerBars
+import dev.melisa.musicplayer.ui.components.LocalSongSelection
 import dev.melisa.musicplayer.ui.components.ManageTagsDialog
 import dev.melisa.musicplayer.ui.components.NeonPanel
 import dev.melisa.musicplayer.ui.components.NewPlaylistDialog
@@ -131,7 +150,7 @@ import dev.melisa.musicplayer.ui.components.PlayPauseGlyph
 import dev.melisa.musicplayer.ui.components.ReorderDialog
 import dev.melisa.musicplayer.ui.components.ReorderUiState
 import dev.melisa.musicplayer.ui.components.SectionKicker
-import dev.melisa.musicplayer.ui.components.ScanningRail
+import dev.melisa.musicplayer.ui.components.rememberSongSelectionState
 import dev.melisa.musicplayer.ui.components.SongCover
 import dev.melisa.musicplayer.ui.screens.ArtistScreen
 import dev.melisa.musicplayer.ui.screens.CollectionEntry
@@ -163,8 +182,12 @@ private const val TAG = "MusicPlayerApp"
 fun MusicPlayerApp(settings: AppSettings) {
     RequestNotificationPermission(settings)
     var current by rememberSaveable { mutableStateOf(Destination.Dashboard) }
-    // Search is no longer a tab: it is opened from the top bar and returns where it came from.
-    var searchReturn by rememberSaveable { mutableStateOf(Destination.Dashboard) }
+    // Search is an overlay, not a tab. It can be pulled down from the top of any
+    // scrolled page; the top bar's magnifier opens it with the same animation.
+    var searchProgress by remember { mutableFloatStateOf(0f) }
+    var searchOpen by remember { mutableStateOf(false) }
+    var searchAnimJob by remember { mutableStateOf<Job?>(null) }
+    val searchScope = rememberCoroutineScope()
     var drawerOpen by rememberSaveable { mutableStateOf(false) }
     var showNowPlaying by rememberSaveable { mutableStateOf(false) }
     // Browsing state for the contextual pages opened from the player.
@@ -349,19 +372,24 @@ fun MusicPlayerApp(settings: AppSettings) {
         play(queue.first(), queue, shuffle = true)
     }
 
-    val albumEntries = remember(tracks) {
+    val albumEntries = remember(tracks, extras.addedAt) {
         tracks.orEmpty()
             .mapNotNull { track -> track.album?.takeIf { it.isNotBlank() }?.let { it to track } }
             .groupBy({ it.first }, { it.second })
             .map { (name, list) ->
+                val artists = list.mapNotNull {
+                    it.artist?.takeIf { artist -> artist.isNotBlank() }
+                }.distinct().sorted()
                 CollectionEntry(
                     name = name,
                     count = list.size,
-                    subtitle = list.mapNotNull { it.artist?.takeIf { artist -> artist.isNotBlank() } }
-                        .distinct()
-                        .sorted()
-                        .joinToString(", "),
+                    subtitle = artists.joinToString(", "),
                     coverUri = list.firstOrNull()?.uri?.toString(),
+                    artist = artists.firstOrNull(),
+                    addedAt = list.maxOfOrNull {
+                        extras.addedAt(it.uri.toString()) ?: 0L
+                    } ?: 0L,
+                    durationMs = list.sumOf { it.durationMs },
                 )
             }
             .sortedBy { it.name.lowercase() }
@@ -381,11 +409,22 @@ fun MusicPlayerApp(settings: AppSettings) {
             .sortedBy { it.lowercase() }
     }
 
-    val artistEntries = remember(tracks) {
+    val artistEntries = remember(tracks, extras.addedAt) {
         tracks.orEmpty()
             .mapNotNull { track -> track.artist?.takeIf { it.isNotBlank() }?.let { it to track } }
             .groupBy({ it.first }, { it.second })
-            .map { (name, list) -> CollectionEntry(name = name, count = list.size, subtitle = null) }
+            .map { (name, list) ->
+                CollectionEntry(
+                    name = name,
+                    count = list.size,
+                    subtitle = null,
+                    artist = name,
+                    addedAt = list.maxOfOrNull {
+                        extras.addedAt(it.uri.toString()) ?: 0L
+                    } ?: 0L,
+                    durationMs = list.sumOf { it.durationMs },
+                )
+            }
             .sortedBy { it.name.lowercase() }
     }
 
@@ -401,6 +440,22 @@ fun MusicPlayerApp(settings: AppSettings) {
     var showTagEditor by remember { mutableStateOf(false) }
     var showNewPlaylist by remember { mutableStateOf(false) }
 
+    // Long-press selection shared by every SongRow/track row in the app.
+    val songSelection = rememberSongSelectionState()
+    var bulkArtistTarget by remember { mutableStateOf<List<Track>?>(null) }
+    var bulkAlbumTarget by remember { mutableStateOf<List<Track>?>(null) }
+    var bulkTagsTarget by remember { mutableStateOf<List<Track>?>(null) }
+    var bulkPlaylistTarget by remember { mutableStateOf<List<Track>?>(null) }
+    var showBulkPlaylistPicker by remember { mutableStateOf(false) }
+    var showNewBulkPlaylist by remember { mutableStateOf(false) }
+    var bulkCompressTarget by remember { mutableStateOf<List<Track>?>(null) }
+    var bulkDeleteTarget by remember { mutableStateOf<List<Track>?>(null) }
+    val bulkEditScope = rememberCoroutineScope()
+    var bulkEditRunning by remember { mutableStateOf(false) }
+    var bulkEditDone by remember { mutableStateOf(0) }
+    var bulkEditTotal by remember { mutableStateOf(0) }
+    var bulkEditMessage by remember { mutableStateOf<String?>(null) }
+
     // Compression: the sheet is global so a batch keeps running while the user browses.
     var compressTracks by remember { mutableStateOf<List<Track>?>(null) }
     var compressState by remember { mutableStateOf(CompressUiState()) }
@@ -415,6 +470,12 @@ fun MusicPlayerApp(settings: AppSettings) {
     val reorderScope = rememberCoroutineScope()
     val mainHandler = remember { android.os.Handler(android.os.Looper.getMainLooper()) }
 
+    // Folder move/explode is a disk batch too; keep its progress and result global so
+    // switching tabs cannot leave an invisible operation running.
+    var folderOpKind by remember { mutableStateOf<FolderOpKind?>(null) }
+    var folderOpMessage by remember { mutableStateOf<String?>(null) }
+    val folderOpScope = rememberCoroutineScope()
+
     // Metadata edits that must wait for playback to stop before touching the file.
     var metadataWriteFailure by remember { mutableStateOf<MetadataWriteFailure?>(null) }
     val metadataScope = rememberCoroutineScope()
@@ -425,7 +486,51 @@ fun MusicPlayerApp(settings: AppSettings) {
      * of the old tab. Without this the new tab renders underneath the old page and the
      * user has to press Back to see what they just tapped.
      */
+    fun animateSearchTo(target: Float) {
+        searchAnimJob?.cancel()
+        searchAnimJob = searchScope.launch {
+            animate(
+                initialValue = searchProgress,
+                targetValue = target,
+                animationSpec = tween(if (target > searchProgress) 280 else 230),
+            ) { value, _ -> searchProgress = value }
+        }
+    }
+
+    fun openSearch() {
+        if (searchOpen && searchProgress >= 1f) return
+        searchOpen = true
+        animateSearchTo(1f)
+    }
+
+    fun closeSearch() {
+        if (!searchOpen && searchProgress <= 0f) return
+        searchOpen = false
+        animateSearchTo(0f)
+    }
+
+    fun commitSearchPull() {
+        searchOpen = true
+        animateSearchTo(1f)
+    }
+
+    fun cancelSearchPull() {
+        animateSearchTo(0f)
+    }
+
+    fun dismissSearchImmediately() {
+        searchAnimJob?.cancel()
+        searchOpen = false
+        searchProgress = 0f
+    }
+
     fun navigate(destination: Destination) {
+        if (destination == Destination.Search) {
+            openSearch()
+            return
+        }
+        dismissSearchImmediately()
+        songSelection.clear()
         openAlbum = null
         openArtist = null
         current = destination
@@ -434,12 +539,14 @@ fun MusicPlayerApp(settings: AppSettings) {
     /** Only one collection page is ever on top; opening one closes the other. */
     fun showAlbum(name: String?) {
         if (name.isNullOrBlank()) return
+        songSelection.clear()
         openArtist = null
         openAlbum = name
     }
 
     fun showArtist(name: String?) {
         if (name.isNullOrBlank()) return
+        songSelection.clear()
         openAlbum = null
         openArtist = name
     }
@@ -598,6 +705,95 @@ fun MusicPlayerApp(settings: AppSettings) {
         extras.queueMetadataEdit(track.uri.toString(), metadata, fileName)
     }
 
+    /**
+     * Applies one artist or album value to a batch, preserving every other tag.
+     *
+     * Non-playing files are rewritten now; the playing file is queued through the
+     * deferred-editor path so a bulk edit cannot introduce the gap the single editor
+     * avoids. The in-memory list and scan cache update immediately.
+     */
+    fun setBulkMetadata(target: List<Track>, artist: String? = null, album: String? = null) {
+        if (bulkEditRunning || target.isEmpty()) return
+        bulkEditRunning = true
+        bulkEditDone = 0
+        bulkEditTotal = target.size
+        bulkEditMessage = null
+        bulkEditScope.launch {
+            SongFileSync.cancelPending()
+            var failed = 0
+            val updates = mutableMapOf<String, Track>()
+            try {
+                target.forEach { track ->
+                    val metadata = TagEditor.read(context, track.uri)
+                    if (metadata == null) {
+                        failed++
+                    } else {
+                        val next = metadata.copy(
+                            artist = artist ?: metadata.artist,
+                            album = album ?: metadata.album,
+                        )
+                        if (nowPlaying?.uri == track.uri && isPlaying) {
+                            queueDeferredMetadata(track, next, songFileInfo(track.uri).name)
+                        } else {
+                            when (TagEditor.write(context, track.uri, next)) {
+                                TagWriteResult.Success -> {
+                                    updates[track.uri.toString()] = track.copy(
+                                        artist = next.artist.takeIf { it.isNotBlank() },
+                                        album = next.album.takeIf { it.isNotBlank() },
+                                    )
+                                }
+                                else -> failed++
+                            }
+                        }
+                    }
+                    bulkEditDone++
+                }
+
+                if (updates.isNotEmpty()) {
+                    tracks = tracks?.map { updates[it.uri.toString()] ?: it }
+                    val current = nowPlaying
+                    val updatedCurrent = updates[current?.uri?.toString()]
+                    if (current != null && updatedCurrent != null) {
+                        nowPlaying = updatedCurrent
+                        val position = controller?.currentPosition?.coerceAtLeast(0L) ?: positionMs
+                        reopenPlayingTrack(
+                            current.uri,
+                            current.uri,
+                            position,
+                            fallbackWasPlaying = false,
+                        )
+                    }
+                    updates.values.forEach { updated ->
+                        extras.cacheEditedMetadata(
+                            updated,
+                            updated.title,
+                            updated.artist,
+                            updated.album,
+                            updated.year,
+                        )
+                    }
+                    refreshToken++
+                }
+            } finally {
+                bulkEditRunning = false
+            }
+            if (failed > 0) {
+                bulkEditMessage = context.resources.getQuantityString(
+                    R.plurals.bulk_metadata_failed,
+                    failed,
+                    failed,
+                )
+            }
+        }
+    }
+
+    fun commonValue(target: List<Track>, selector: (Track) -> String?): String =
+        target.mapNotNull(selector)
+            .filter { it.isNotBlank() }
+            .distinct()
+            .singleOrNull()
+            .orEmpty()
+
     // A queued edit waits until its own track is no longer actively playing. Pausing,
     // changing track, or relaunching makes the pending list eligible; another track may
     // keep playing in the meantime without blocking the write.
@@ -705,6 +901,89 @@ fun MusicPlayerApp(settings: AppSettings) {
                 // Some files may already have moved; re-key those and rescan.
                 reorderState = ReorderUiState(folderName = name, error = true)
                 refreshToken++
+            }
+        }
+    }
+
+    fun startFolderMove(
+        sourcePath: String,
+        destinationPath: String,
+        sourceTracks: List<Track>,
+        destinationTracks: List<Track>,
+    ) {
+        if (folderOpKind != null || sourceTracks.isEmpty() || destinationTracks.isEmpty()) return
+        folderOpKind = FolderOpKind.Move
+        folderOpMessage = null
+        folderOpScope.launch {
+            try {
+                val outcome = FolderReorder.moveFolder(
+                    context = context,
+                    folderPath = sourcePath,
+                    destinationPath = destinationPath,
+                    folderTracks = sourceTracks,
+                    destinationTracks = destinationTracks,
+                )
+                if (outcome.error != null) {
+                    folderOpMessage = context.getString(R.string.folder_op_failed)
+                } else {
+                    outcome.movedTracks.forEach { applyMovedTrack(it) }
+                    refreshToken++
+                }
+            } catch (_: Exception) {
+                folderOpMessage = context.getString(R.string.folder_op_failed)
+            } finally {
+                folderOpKind = null
+            }
+        }
+    }
+
+    fun startFolderExplode(folderPath: String, folderTracks: List<Track>) {
+        if (folderOpKind != null || folderTracks.isEmpty()) return
+        folderOpKind = FolderOpKind.Explode
+        folderOpMessage = null
+        folderOpScope.launch {
+            try {
+                val outcome = FolderReorder.explodeFolder(
+                    context = context,
+                    folderPath = folderPath,
+                    folderTracks = folderTracks,
+                )
+                if (outcome.error != null) {
+                    folderOpMessage = context.getString(R.string.folder_op_failed)
+                } else {
+                    outcome.movedTracks.forEach { applyMovedTrack(it) }
+                    refreshToken++
+                    val movedLabel = context.resources.getQuantityString(
+                        R.plurals.folder_items_moved,
+                        outcome.movedChildren,
+                        outcome.movedChildren,
+                    )
+                    val blocked = outcome.skipped + outcome.failed
+                    when {
+                        blocked > 0 -> {
+                            val blockedLabel = context.resources.getQuantityString(
+                                R.plurals.folder_items_blocked,
+                                blocked,
+                                blocked,
+                            )
+                            folderOpMessage = context.getString(
+                                R.string.folder_explode_partial,
+                                movedLabel,
+                                blockedLabel,
+                            )
+                        }
+                        !outcome.deleted -> {
+                            folderOpMessage = context.getString(
+                                R.string.folder_explode_undeleted,
+                                movedLabel,
+                            )
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                folderOpMessage = context.getString(R.string.folder_op_failed)
+            } finally {
+                folderOpKind = null
             }
         }
     }
@@ -858,6 +1137,58 @@ fun MusicPlayerApp(settings: AppSettings) {
         }
     }
 
+    fun deleteTracks(target: List<Track>) {
+        if (target.isEmpty()) return
+        deleteScope.launch {
+            var failed = 0
+            target.forEach { track ->
+                if (!deleteSongFile(context, track.uri)) {
+                    failed++
+                    return@forEach
+                }
+                extras.forget(track.uri.toString())
+                if (editingTrack?.uri == track.uri) editingTrack = null
+
+                val player = controller
+                val index = player?.let { p ->
+                    (0 until p.mediaItemCount).firstOrNull { i ->
+                        p.getMediaItemAt(i).mediaId == track.uri.toString()
+                    }
+                }
+                if (player != null && index != null) {
+                    player.removeMediaItem(index)
+                    if (player.mediaItemCount == 0) {
+                        player.stop()
+                        nowPlaying = null
+                    }
+                } else if (nowPlaying?.uri == track.uri) {
+                    nowPlaying = null
+                }
+            }
+            refreshToken++
+            if (failed > 0) {
+                bulkEditMessage = context.resources.getQuantityString(
+                    R.plurals.bulk_delete_failed,
+                    failed,
+                    failed,
+                )
+            }
+        }
+    }
+
+    LaunchedEffect(showNowPlaying, drawerOpen) {
+        if (showNowPlaying || drawerOpen) songSelection.clear()
+    }
+
+    LaunchedEffect(Unit) {
+        if (current == Destination.Search) {
+            // Saved state from the old Search tab: lift it into the overlay.
+            current = Destination.Dashboard
+            searchOpen = true
+            searchProgress = 1f
+        }
+    }
+
     BackHandler(enabled = drawerOpen) { drawerOpen = false }
     BackHandler(enabled = showNowPlaying && !drawerOpen) { showNowPlaying = false }
     BackHandler(enabled = editingTrack != null) { editingTrack = null }
@@ -875,38 +1206,103 @@ fun MusicPlayerApp(settings: AppSettings) {
             compressTracks == null &&
             reorderState == null,
     ) {
-        navigate(if (current == Destination.Search) searchReturn else Destination.Dashboard)
+        navigate(Destination.Dashboard)
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-    ) {
-        Scaffold(
+    val searchThresholdPx = with(LocalDensity.current) { 150.dp.toPx() }
+    val searchPullEnabled = !searchOpen &&
+        !drawerOpen &&
+        !showNowPlaying &&
+        editingTrack == null &&
+        !showFreeSpace &&
+        compressTracks == null &&
+        reorderState == null &&
+        !songSelection.active
+    val searchNestedScroll = remember(searchPullEnabled, searchThresholdPx) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (searchProgress <= 0f || available.y >= 0f) return Offset.Zero
+                searchAnimJob?.cancel()
+                val next = (searchProgress + available.y / searchThresholdPx)
+                    .coerceAtLeast(0f)
+                val consumed = (next - searchProgress) * searchThresholdPx
+                searchProgress = next
+                return Offset(0f, consumed)
+            }
+
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource,
+            ): Offset {
+                if (!searchPullEnabled || searchOpen || available.y <= 0f) {
+                    return Offset.Zero
+                }
+                searchAnimJob?.cancel()
+                val next = (searchProgress + available.y / searchThresholdPx)
+                    .coerceAtMost(1f)
+                val consumed = (next - searchProgress) * searchThresholdPx
+                searchProgress = next
+                return Offset(0f, consumed)
+            }
+
+            override suspend fun onPostFling(
+                consumed: Velocity,
+                available: Velocity,
+            ): Velocity {
+                if (searchProgress > 0f) {
+                    if (searchProgress >= 0.3f || available.y > 900f) {
+                        commitSearchPull()
+                    } else {
+                        cancelSearchPull()
+                    }
+                }
+                return Velocity.Zero
+            }
+        }
+    }
+
+    CompositionLocalProvider(LocalSongSelection provides songSelection) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+        ) {
+            Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             topBar = {
                 CyberTopBar(
-                    title = stringResource(current.labelRes),
+                    title = stringResource(
+                        if (searchOpen) Destination.Search.labelRes else current.labelRes,
+                    ),
                     isPlaying = isPlaying,
                     hasTrack = nowPlaying != null,
-                    // Only when the library is already visible; with nothing to show the
-                    // screens carry the full scanning state instead.
-                    isScanning = isScanning && tracks != null,
-                    isSearch = current == Destination.Search,
+                    isSearch = searchOpen,
                     onMenu = { drawerOpen = true },
-                    onSearch = {
-                        if (current != Destination.Search) searchReturn = current
-                        navigate(Destination.Search)
-                    },
-                    onCloseSearch = { navigate(searchReturn) },
+                    onSearch = { if (searchOpen) closeSearch() else openSearch() },
+                    onCloseSearch = { closeSearch() },
                 )
             },
             bottomBar = {
                 Column {
+                    if (songSelection.active) {
+                        BulkSelectionBar(
+                            count = songSelection.selected.size,
+                            onClear = { songSelection.clear() },
+                            onSetArtist = { bulkArtistTarget = songSelection.tracks },
+                            onSetAlbum = { bulkAlbumTarget = songSelection.tracks },
+                            onSetTags = { bulkTagsTarget = songSelection.tracks },
+                            onAddToPlaylist = {
+                                bulkPlaylistTarget = songSelection.tracks
+                                showBulkPlaylistPicker = true
+                            },
+                            onCompress = { bulkCompressTarget = songSelection.tracks },
+                            onDelete = { bulkDeleteTarget = songSelection.tracks },
+                        )
+                    }
                     AnimatedVisibility(
-                        visible = nowPlaying != null,
+                        visible = nowPlaying != null && !songSelection.active,
                         enter = slideInVertically(animationSpec = tween(Motion.Medium)) { it / 2 } +
                             fadeIn(tween(Motion.Medium)) +
                             expandVertically(expandFrom = Alignment.Bottom),
@@ -945,7 +1341,8 @@ fun MusicPlayerApp(settings: AppSettings) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding),
+                    .padding(innerPadding)
+                    .nestedScroll(searchNestedScroll),
             ) {
                 AnimatedContent(
                     targetState = current,
@@ -965,6 +1362,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                             nowPlaying = nowPlaying,
                             isPlaying = isPlaying,
                             onPlay = { track, queue -> play(track, queue) },
+                            onCompress = { selection -> openCompress(selection) },
                             onOpenSongs = { navigate(Destination.Songs) },
                             onOpenFiles = { navigate(Destination.Files) },
                             onOpenAlbums = { navigate(Destination.Albums) },
@@ -977,6 +1375,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                             addedAt = extras.addedAt,
                             currentTrackUri = nowPlaying?.uri?.toString(),
                             isPlaying = isPlaying,
+                            isScanning = isScanning,
                             hasLibraries = settings.libraries.isNotEmpty(),
                             onPlay = { track, queue -> play(track, queue) },
                             onShuffleAll = { shuffleEverything() },
@@ -995,9 +1394,21 @@ fun MusicPlayerApp(settings: AppSettings) {
                             currentTrackUri = nowPlaying?.uri?.toString(),
                             hasLibraries = settings.libraries.isNotEmpty(),
                             starredFolders = extras.starredFolders,
+                            addedAt = extras.addedAt,
                             onToggleFolderStar = { extras.toggleFolderStarred(it) },
                             onReorderFolder = { path, folderTracks ->
                                 startReorderFolder(path, folderTracks)
+                            },
+                            onMoveFolder = { source, destination, folderTracks, destinationTracks ->
+                                startFolderMove(
+                                    sourcePath = source,
+                                    destinationPath = destination,
+                                    sourceTracks = folderTracks,
+                                    destinationTracks = destinationTracks,
+                                )
+                            },
+                            onExplodeFolder = { path, folderTracks ->
+                                startFolderExplode(path, folderTracks)
                             },
                             onPlay = { track, queue -> play(track, queue) },
                             onAddToPlaylist = { openAddToPlaylist(it) },
@@ -1008,7 +1419,10 @@ fun MusicPlayerApp(settings: AppSettings) {
                             onDislike = { dislike(it) },
                             onDelete = { deleteTarget = it },
                             path = filesPath,
-                            onPathChange = { filesPath = it },
+                            onPathChange = {
+                                songSelection.clear()
+                                filesPath = it
+                            },
                         )
                         Destination.Albums -> CollectionsBrowserScreen(
                             entries = albumEntries,
@@ -1016,6 +1430,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                             isArtist = false,
                             libraries = settings.libraries,
                             artVersion = artVersion,
+                            starred = extras.starredAlbums,
                             onOpen = { showAlbum(it) },
                         )
                         Destination.Artists -> CollectionsBrowserScreen(
@@ -1024,25 +1439,10 @@ fun MusicPlayerApp(settings: AppSettings) {
                             isArtist = true,
                             libraries = settings.libraries,
                             artVersion = artVersion,
+                            starred = extras.starredArtists,
                             onOpen = { showArtist(it) },
                         )
-                        Destination.Search -> SearchScreen(
-                            tracks = tracks,
-                            albums = albumEntries,
-                            artists = artistEntries,
-                            currentTrackUri = nowPlaying?.uri?.toString(),
-                            hasLibraries = settings.libraries.isNotEmpty(),
-                            onPlay = { track, queue -> play(track, queue) },
-                            onAddToPlaylist = { openAddToPlaylist(it) },
-                            onManageTags = { openTags(it) },
-                            onEditMetadata = { editingTrack = it },
-                            onCompress = { openCompress(listOf(it)) },
-                            onLike = { extras.like(it.uri.toString()) },
-                            onDislike = { dislike(it) },
-                            onDelete = { deleteTarget = it },
-                            onOpenAlbum = { showAlbum(it) },
-                            onOpenArtist = { showArtist(it) },
-                        )
+                        Destination.Search -> Unit
                         Destination.Playlists -> PlaylistsDestination(
                             extras = extras,
                             tracks = tracks,
@@ -1060,10 +1460,14 @@ fun MusicPlayerApp(settings: AppSettings) {
                 // Album/artist pages live inside the tab content, so the bottom bar and
                 // the mini player stay visible while browsing a collection.
                 PageOverlay(page = openAlbum) { albumName ->
-                    val albumTracks = tracks.orEmpty()
-                        .filter { it.album?.equals(albumName, ignoreCase = true) == true }
-                        .sortedBy { it.title.lowercase() }
-                    BackHandler { openAlbum = null }
+                    val albumTracks = extras.albumTracksInOrder(
+                        albumName,
+                        tracks.orEmpty()
+                            .filter { it.album?.equals(albumName, ignoreCase = true) == true },
+                    )
+                    BackHandler {
+                        if (songSelection.active) songSelection.clear() else openAlbum = null
+                    }
                     CollectionScreen(
                         kicker = stringResource(R.string.field_album),
                         title = albumName,
@@ -1080,13 +1484,21 @@ fun MusicPlayerApp(settings: AppSettings) {
                         onDislike = { dislike(it) },
                         onDelete = { deleteTarget = it },
                         onEdit = { editAlbum = albumName },
+                        onReorder = { reordered ->
+                            extras.setAlbumOrder(
+                                albumName,
+                                reordered.map { it.uri.toString() },
+                            )
+                        },
                     )
                 }
                 PageOverlay(page = openArtist) { artistName ->
                     val artistTracks = tracks.orEmpty()
                         .filter { it.artist?.equals(artistName, ignoreCase = true) == true }
                         .sortedBy { it.album.orEmpty().lowercase() }
-                    BackHandler { openArtist = null }
+                    BackHandler {
+                        if (songSelection.active) songSelection.clear() else openArtist = null
+                    }
                     ArtistScreen(
                         artistName = artistName,
                         tracks = artistTracks,
@@ -1103,6 +1515,47 @@ fun MusicPlayerApp(settings: AppSettings) {
                         onDelete = { deleteTarget = it },
                         onEdit = { editArtist = artistName },
                     )
+                }
+
+                if (searchOpen || searchProgress > 0f) {
+                    BackHandler(enabled = searchOpen) { closeSearch() }
+                    val overlayBackground = MaterialTheme.colorScheme.background
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .zIndex(10f)
+                            .drawWithContent {
+                                clipRect(bottom = size.height * searchProgress) {
+                                    drawRect(overlayBackground)
+                                    this@drawWithContent.drawContent()
+                                }
+                            },
+                    ) {
+                        SearchScreen(
+                            tracks = tracks,
+                            albums = albumEntries,
+                            artists = artistEntries,
+                            currentTrackUri = nowPlaying?.uri?.toString(),
+                            hasLibraries = settings.libraries.isNotEmpty(),
+                            onPlay = { track, queue -> play(track, queue) },
+                            onAddToPlaylist = { openAddToPlaylist(it) },
+                            onManageTags = { openTags(it) },
+                            onEditMetadata = { editingTrack = it },
+                            onCompress = { openCompress(listOf(it)) },
+                            onLike = { extras.like(it.uri.toString()) },
+                            onDislike = { dislike(it) },
+                            onDelete = { deleteTarget = it },
+                            onOpenAlbum = {
+                                dismissSearchImmediately()
+                                showAlbum(it)
+                            },
+                            onOpenArtist = {
+                                dismissSearchImmediately()
+                                showArtist(it)
+                            },
+                            autoFocus = searchOpen,
+                        )
+                    }
                 }
             }
         }
@@ -1127,7 +1580,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                 exit = slideOutHorizontally(animationSpec = tween(Motion.Fast)) { if (onEnd) it else -it },
             ) {
                 DrawerSheet(
-                    current = current,
+                    current = if (searchOpen) Destination.Search else current,
                     onSelect = {
                         navigate(it)
                         drawerOpen = false
@@ -1198,6 +1651,8 @@ fun MusicPlayerApp(settings: AppSettings) {
                 isArtist = false,
                 libraries = settings.libraries,
                 sampleTrackUri = albumTracks.firstOrNull()?.uri,
+                isStarred = extras.isAlbumStarred(albumBeingEdited),
+                onToggleStar = { extras.toggleAlbumStarred(albumBeingEdited) },
                 onClose = { editAlbum = null },
                 onSaved = {
                     artVersion++
@@ -1214,6 +1669,8 @@ fun MusicPlayerApp(settings: AppSettings) {
                 isArtist = true,
                 libraries = settings.libraries,
                 sampleTrackUri = null,
+                isStarred = extras.isArtistStarred(artistBeingEdited),
+                onToggleStar = { extras.toggleArtistStarred(artistBeingEdited) },
                 onClose = { editArtist = null },
                 onSaved = {
                     artVersion++
@@ -1303,6 +1760,8 @@ fun MusicPlayerApp(settings: AppSettings) {
             )
         }
 
+        BackHandler(enabled = songSelection.active) { songSelection.clear() }
+
         val pendingDelete = deleteTarget
         if (pendingDelete != null) {
             AlertDialog(
@@ -1342,6 +1801,57 @@ fun MusicPlayerApp(settings: AppSettings) {
                 text = { Text(stringResource(R.string.delete_song_failed)) },
                 confirmButton = {
                     TextButton(onClick = { deleteFailed = false }) {
+                        Text(stringResource(R.string.action_close))
+                    }
+                },
+            )
+        }
+
+        val runningFolderOp = folderOpKind
+        if (runningFolderOp != null) {
+            AlertDialog(
+                onDismissRequest = {},
+                title = {
+                    Text(
+                        stringResource(
+                            if (runningFolderOp == FolderOpKind.Move) {
+                                R.string.folder_move
+                            } else {
+                                R.string.folder_explode
+                            },
+                        ),
+                    )
+                },
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(22.dp),
+                            strokeWidth = 2.dp,
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            stringResource(
+                                if (runningFolderOp == FolderOpKind.Move) {
+                                    R.string.folder_move_running
+                                } else {
+                                    R.string.folder_explode_running
+                                },
+                            ),
+                        )
+                    }
+                },
+                confirmButton = {},
+            )
+        }
+
+        val folderMessage = folderOpMessage
+        if (runningFolderOp == null && folderMessage != null) {
+            AlertDialog(
+                onDismissRequest = { folderOpMessage = null },
+                title = { Text(stringResource(R.string.files_folder_actions)) },
+                text = { Text(folderMessage) },
+                confirmButton = {
+                    TextButton(onClick = { folderOpMessage = null }) {
                         Text(stringResource(R.string.action_close))
                     }
                 },
@@ -1409,6 +1919,181 @@ fun MusicPlayerApp(settings: AppSettings) {
             )
         }
 
+        bulkArtistTarget?.let { target ->
+            BulkTextFieldDialog(
+                title = stringResource(R.string.bulk_set_artist_title),
+                label = stringResource(R.string.field_artist),
+                supporting = pluralStringResource(R.plurals.bulk_apply_to, target.size, target.size),
+                initial = commonValue(target) { it.artist },
+                onDismiss = { bulkArtistTarget = null },
+                onConfirm = { value ->
+                    bulkArtistTarget = null
+                    songSelection.clear()
+                    setBulkMetadata(target, artist = value)
+                },
+            )
+        }
+
+        bulkAlbumTarget?.let { target ->
+            BulkTextFieldDialog(
+                title = stringResource(R.string.bulk_set_album_title),
+                label = stringResource(R.string.field_album),
+                supporting = pluralStringResource(R.plurals.bulk_apply_to, target.size, target.size),
+                initial = commonValue(target) { it.album },
+                onDismiss = { bulkAlbumTarget = null },
+                onConfirm = { value ->
+                    bulkAlbumTarget = null
+                    songSelection.clear()
+                    setBulkMetadata(target, album = value)
+                },
+            )
+        }
+
+        bulkTagsTarget?.let { target ->
+            val commonTags = remember(target, extras.tags) {
+                val lists = target.map { extras.tagsFor(it.uri.toString()) }
+                lists.firstOrNull()?.filter { tag ->
+                    lists.all { list -> list.any { it.equals(tag, ignoreCase = true) } }
+                }.orEmpty()
+            }
+            BulkTagsDialog(
+                title = pluralStringResource(R.plurals.bulk_tags_title, target.size, target.size),
+                tags = commonTags,
+                note = pluralStringResource(R.plurals.bulk_tags_note, target.size, target.size),
+                onAdd = { tag -> target.forEach { extras.addTag(it.uri.toString(), tag) } },
+                onRemove = { tag -> target.forEach { extras.removeTag(it.uri.toString(), tag) } },
+                onDismiss = {
+                    bulkTagsTarget = null
+                    songSelection.clear()
+                },
+            )
+        }
+
+        val bulkPlaylist = bulkPlaylistTarget
+        if (showBulkPlaylistPicker && bulkPlaylist != null) {
+            AddToPlaylistDialog(
+                playlists = extras.playlists,
+                onDismiss = {
+                    showBulkPlaylistPicker = false
+                    bulkPlaylistTarget = null
+                },
+                onPick = { playlist ->
+                    bulkPlaylist.forEach { extras.addToPlaylist(playlist.id, it.uri.toString()) }
+                    showBulkPlaylistPicker = false
+                    bulkPlaylistTarget = null
+                    songSelection.clear()
+                },
+                onCreateNew = {
+                    showBulkPlaylistPicker = false
+                    showNewBulkPlaylist = true
+                },
+            )
+        }
+
+        if (showNewBulkPlaylist && bulkPlaylist != null) {
+            NewPlaylistDialog(
+                onDismiss = {
+                    showNewBulkPlaylist = false
+                    bulkPlaylistTarget = null
+                },
+                onCreate = { name ->
+                    val playlist = extras.createPlaylist(name)
+                    bulkPlaylist.forEach { extras.addToPlaylist(playlist.id, it.uri.toString()) }
+                    showNewBulkPlaylist = false
+                    bulkPlaylistTarget = null
+                    songSelection.clear()
+                },
+            )
+        }
+
+        bulkCompressTarget?.let { target ->
+            AlertDialog(
+                onDismissRequest = { bulkCompressTarget = null },
+                title = { Text(stringResource(R.string.action_compress)) },
+                text = {
+                    Text(pluralStringResource(R.plurals.bulk_compress_confirm, target.size, target.size))
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        bulkCompressTarget = null
+                        songSelection.clear()
+                        openCompress(target)
+                    }) {
+                        Text(stringResource(R.string.action_continue))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { bulkCompressTarget = null }) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                },
+            )
+        }
+
+        bulkDeleteTarget?.let { target ->
+            AlertDialog(
+                onDismissRequest = { bulkDeleteTarget = null },
+                title = { Text(stringResource(R.string.action_delete_file)) },
+                text = {
+                    Text(pluralStringResource(R.plurals.bulk_delete_confirm, target.size, target.size))
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        bulkDeleteTarget = null
+                        songSelection.clear()
+                        deleteTracks(target)
+                    }) {
+                        Text(
+                            text = stringResource(R.string.action_delete),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { bulkDeleteTarget = null }) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                },
+            )
+        }
+
+        if (bulkEditRunning) {
+            AlertDialog(
+                onDismissRequest = {},
+                title = { Text(stringResource(R.string.bulk_updating_title)) },
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(22.dp),
+                            strokeWidth = 2.dp,
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            stringResource(
+                                R.string.bulk_updating_progress,
+                                bulkEditDone,
+                                bulkEditTotal,
+                            ),
+                        )
+                    }
+                },
+                confirmButton = {},
+            )
+        }
+
+        bulkEditMessage?.let { message ->
+            AlertDialog(
+                onDismissRequest = { bulkEditMessage = null },
+                title = { Text(stringResource(R.string.bulk_result_title)) },
+                text = { Text(message) },
+                confirmButton = {
+                    TextButton(onClick = { bulkEditMessage = null }) {
+                        Text(stringResource(R.string.action_close))
+                    }
+                },
+            )
+        }
+
         compressTracks?.let { selection ->
             CompressSheet(
                 tracks = selection,
@@ -1426,6 +2111,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                 state = state,
                 onDismiss = { reorderState = null },
             )
+        }
         }
     }
 }
@@ -1464,7 +2150,6 @@ private fun CyberTopBar(
     title: String,
     isPlaying: Boolean,
     hasTrack: Boolean,
-    isScanning: Boolean,
     isSearch: Boolean,
     onMenu: () -> Unit,
     onSearch: () -> Unit,
@@ -1520,33 +2205,6 @@ private fun CyberTopBar(
                 )
             }
         }
-        // In-place progress during a refresh: the library underneath stays usable.
-        AnimatedVisibility(
-            visible = isScanning,
-            enter = fadeIn(tween(Motion.Fast)) + expandVertically(expandFrom = Alignment.Top),
-            exit = fadeOut(tween(Motion.Fast)) + shrinkVertically(shrinkTowards = Alignment.Top),
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 58.dp, end = 16.dp, top = 2.dp, bottom = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                ScanningRail(
-                    modifier = Modifier.width(56.dp),
-                    color = Cyber.Amber,
-                    railHeight = 4.dp,
-                )
-                Text(
-                    text = stringResource(R.string.songs_scanning).uppercase(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Cyber.Amber,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1594,7 +2252,15 @@ private fun CyberBottomBar(
                         onClick = onMenu,
                     )
                 }
-                listOf(Destination.Dashboard, Destination.Songs, Destination.Playlists).forEach { destination ->
+                // The three main destinations mirror with the holding hand. Right:
+                // Dashboard, Playlists, Songs, Menu. Left: Menu, Songs, Playlists,
+                // Dashboard.
+                val mainDestinations = if (menuOnStart) {
+                    listOf(Destination.Songs, Destination.Playlists, Destination.Dashboard)
+                } else {
+                    listOf(Destination.Dashboard, Destination.Playlists, Destination.Songs)
+                }
+                mainDestinations.forEach { destination ->
                     NavItem(
                         icon = destination.icon,
                         label = stringResource(destination.labelRes),
@@ -1995,3 +2661,5 @@ private fun Track.toMediaItem(target: Uri = uri): MediaItem {
         )
         .build()
 }
+
+private enum class FolderOpKind { Move, Explode }
