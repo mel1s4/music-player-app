@@ -74,6 +74,7 @@ import dev.melisa.musicplayer.R
 import dev.melisa.musicplayer.data.AudioFileDetails
 import dev.melisa.musicplayer.data.AudioFileInfo
 import dev.melisa.musicplayer.data.LibraryExtras
+import dev.melisa.musicplayer.data.PendingMetadata
 import dev.melisa.musicplayer.data.SongFileInfo
 import dev.melisa.musicplayer.data.songFileInfo
 import dev.melisa.musicplayer.data.SongMetadata
@@ -99,6 +100,9 @@ fun EditMetadataScreen(
     knownAlbums: List<String> = emptyList(),
     onClose: () -> Unit,
     onSaved: (Uri) -> Unit,
+    pending: PendingMetadata? = null,
+    deferFileWrite: Boolean = false,
+    onDeferredSaved: (SongMetadata, String) -> Unit = { _, _ -> },
     onCompress: (Track) -> Unit = {},
     onHearDifference: (Track, AudioFileDetails?) -> Unit = { _, _ -> },
 ) {
@@ -115,8 +119,10 @@ fun EditMetadataScreen(
     LaunchedEffect(track.uri) {
         val info = songFileInfo(track.uri)
         fileInfo = info
-        fileName = info.name
-        metadata = TagEditor.read(context, track.uri)
+        // A queued edit wins over the file: the old tags are still on disk until the
+        // track stops playing, and reopening the editor must not lose the new values.
+        fileName = pending?.fileName?.takeIf { it.isNotBlank() } ?: info.name
+        metadata = pending?.metadata ?: TagEditor.read(context, track.uri)
         audioDetails = AudioFileInfo.read(context, track.uri, track.sizeBytes)
     }
 
@@ -126,6 +132,15 @@ fun EditMetadataScreen(
         scope.launch {
             saving = true
             errorRes = null
+
+            // Rewriting the file under a live decoder is what causes the audible gap.
+            // While the song is playing, remember the edit and let the player pause or
+            // change track before the file is touched.
+            if (deferFileWrite) {
+                onDeferredSaved(current, fileName)
+                saving = false
+                return@launch
+            }
 
             var target = track.uri
             val originalName = fileInfo?.name.orEmpty()

@@ -67,6 +67,7 @@
     <string name="action_shuffle">Shuffle</string>
     <string name="action_previous">Previous</string>
     <string name="action_next">Next</string>
+    <string name="seek_song">Seek in song</string>
     <string name="action_love">Love</string>
     <string name="action_add_to_playlist">Add to playlist</string>
     <string name="action_manage_tags">Manage tags</string>

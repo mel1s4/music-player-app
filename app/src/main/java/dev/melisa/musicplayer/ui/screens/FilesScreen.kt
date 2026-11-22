@@ -101,7 +101,16 @@ fun FilesScreen(
 
         else -> {
             val root = remember(tracks) { buildTree(tracks) }
-            val node = remember(root, path) { root.find(path) ?: root }
+            val resolvedNode = remember(root, path) { root.find(path) }
+            // A reorder can move the last song out of the folder the user is standing
+            // in. Walk back to the nearest ancestor that still exists instead of
+            // showing a breadcrumb for a folder that is gone from the tree.
+            LaunchedEffect(root, path) {
+                if (resolvedNode == null && path.isNotEmpty()) {
+                    onPathChange(path.substringBeforeLast('/', ""))
+                }
+            }
+            val node = resolvedNode ?: root
             val folders = node.children.values.sortedBy { it.name.lowercase() }
             val folderTracks = node.tracks.sortedBy { it.title.lowercase() }
             val atRoot = path.isEmpty()

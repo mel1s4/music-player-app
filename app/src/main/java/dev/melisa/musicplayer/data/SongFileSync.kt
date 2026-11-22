@@ -65,6 +65,13 @@ object SongFileSync {
         }
     }
 
+    /** Drops a queued write for one file whose metadata is about to be written. */
+    fun cancelPending(uri: Uri) {
+        synchronized(pending) {
+            pending.remove(uri.toString())?.cancel()
+        }
+    }
+
     private fun write(
         context: Context,
         uri: Uri,

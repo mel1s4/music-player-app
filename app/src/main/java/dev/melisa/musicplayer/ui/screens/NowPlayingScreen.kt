@@ -1,16 +1,20 @@
 package dev.melisa.musicplayer.ui.screens
 
+import android.net.Uri
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -39,6 +43,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.Compress
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -54,8 +60,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -63,6 +67,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -76,6 +81,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
@@ -87,6 +93,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import dev.melisa.musicplayer.R
+import dev.melisa.musicplayer.data.AudioWaveform
 import dev.melisa.musicplayer.data.LibraryExtras
 import dev.melisa.musicplayer.data.Track
 import dev.melisa.musicplayer.ui.components.LiveDot
@@ -94,6 +101,7 @@ import dev.melisa.musicplayer.ui.components.NeonPanel
 import dev.melisa.musicplayer.ui.components.PlayPauseGlyph
 import dev.melisa.musicplayer.ui.components.SectionKicker
 import dev.melisa.musicplayer.ui.components.SongCover
+import dev.melisa.musicplayer.ui.components.WaveformSeekBar
 import dev.melisa.musicplayer.ui.components.formatTime
 import dev.melisa.musicplayer.ui.components.ratingColor
 import dev.melisa.musicplayer.ui.theme.Cyber
@@ -128,6 +136,8 @@ fun NowPlayingScreen(
     rating: Int,
     onLike: () -> Unit,
     onDislike: () -> Unit,
+    onDelete: () -> Unit,
+    onCompress: () -> Unit,
     onGoToFolder: () -> Unit,
     onGoToAlbum: () -> Unit,
     onGoToArtist: () -> Unit,
@@ -138,6 +148,7 @@ fun NowPlayingScreen(
     val total = durationMs.coerceAtLeast(1L)
     val sliderValue = scrub ?: (positionMs.toFloat() / total).coerceIn(0f, 1f)
     val shownPosition = scrub?.let { (it * total).toLong() } ?: positionMs
+    val waveform = rememberWaveform(track.uri, track.durationMs)
 
     // Swipe down on the grab area or the artwork to hide the player, or swipe up to
     // open the song editor. The sheet follows the finger while dragging.
@@ -314,6 +325,110 @@ fun NowPlayingScreen(
                     }
                 }
 
+                Spacer(Modifier.height(10.dp))
+
+                // Rating lives at the top of the sheet, so it is visible without
+                // scrolling past the artwork. A disliked song keeps Delete/Compress
+                // directly above the thumbs.
+                AnimatedVisibility(
+                    visible = rating < LibraryExtras.DEFAULT_RATING,
+                    enter = fadeIn(tween(Motion.Fast)) + expandVertically(),
+                    exit = fadeOut(tween(Motion.Fast)) + shrinkVertically(),
+                ) {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            NowPlayingAction(
+                                icon = Icons.Filled.Delete,
+                                label = stringResource(R.string.action_delete),
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onDelete()
+                                },
+                            )
+                            NowPlayingAction(
+                                icon = Icons.Filled.Compress,
+                                label = stringResource(R.string.action_compress),
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onCompress()
+                                },
+                            )
+                        }
+                        Spacer(Modifier.height(12.dp))
+                    }
+                }
+
+                // The number drives the weighted shuffle, so it is always in view.
+                NeonPanel(
+                    modifier = Modifier.fillMaxWidth(),
+                    container = MaterialTheme.colorScheme.surfaceContainer,
+                    corner = 18.dp,
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ScoreAction(
+                            icon = Icons.Filled.ThumbDown,
+                            description = stringResource(R.string.action_dislike),
+                            tint = MaterialTheme.colorScheme.error,
+                            active = rating < LibraryExtras.DEFAULT_RATING,
+                            onClick = {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onDislike()
+                                scope.launch {
+                                    dislikeFeedback.stop()
+                                    dislikeFeedback.snapTo(0f)
+                                    dislikeFeedback.animateTo(
+                                        targetValue = 1f,
+                                        animationSpec = tween(
+                                            durationMillis = 1100,
+                                            easing = Motion.Standard,
+                                        ),
+                                    )
+                                    dislikeFeedback.snapTo(0f)
+                                }
+                            },
+                        )
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 14.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            // The signed score is the number the shuffle actually reads, so
+                            // it is shown verbatim between the two thumbs.
+                            val scoreText = if (rating > 0) "+$rating" else rating.toString()
+                            val scoreLabel = stringResource(R.string.rating_score)
+                            Text(
+                                text = scoreText,
+                                modifier = Modifier.semantics {
+                                    contentDescription = "$scoreLabel: $scoreText"
+                                },
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = ratingColor(rating),
+                            )
+                        }
+                        ScoreAction(
+                            icon = Icons.Filled.ThumbUp,
+                            description = stringResource(R.string.action_like),
+                            tint = MaterialTheme.colorScheme.primary,
+                            active = rating > LibraryExtras.DEFAULT_RATING,
+                            onClick = onLike,
+                        )
+                    }
+                }
+
                 Spacer(Modifier.height(14.dp))
 
                 BoxWithConstraints(
@@ -437,40 +552,13 @@ fun NowPlayingScreen(
 
                 Spacer(Modifier.height(20.dp))
 
-                Slider(
-                    value = sliderValue,
-                    onValueChange = { scrub = it },
-                    onValueChangeFinished = {
-                        scrub?.let { onSeek((it * total).toLong()) }
+                WaveformSeekBar(
+                    progress = sliderValue,
+                    amplitudes = waveform,
+                    onScrub = { scrub = it },
+                    onSeek = { fraction ->
+                        onSeek((fraction * total).toLong())
                         scrub = null
-                    },
-                    colors = SliderDefaults.colors(
-                        thumbColor = MaterialTheme.colorScheme.primary,
-                        activeTrackColor = MaterialTheme.colorScheme.primary,
-                        inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant,
-                        activeTickColor = Color.Transparent,
-                        inactiveTickColor = Color.Transparent,
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(40.dp),
-                    thumb = {
-                        // A 22dp disc, not Material's 4dp hairline: this is the one
-                        // control people drag with a thumb, and it must be hittable.
-                        Box(
-                            modifier = Modifier
-                                .size(22.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.onPrimary),
-                            )
-                        }
                     },
                 )
                 Row(
@@ -586,72 +674,6 @@ fun NowPlayingScreen(
                                 .size(28.dp)
                                 .graphicsLayerScale(favScale),
                             tint = if (isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(18.dp))
-
-                // Score block: the number drives the weighted shuffle, so show the meter.
-                NeonPanel(
-                    modifier = Modifier.fillMaxWidth(),
-                    container = MaterialTheme.colorScheme.surfaceContainer,
-                    corner = 18.dp,
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        ScoreAction(
-                            icon = Icons.Filled.ThumbDown,
-                            description = stringResource(R.string.action_dislike),
-                            tint = MaterialTheme.colorScheme.error,
-                            active = rating < LibraryExtras.DEFAULT_RATING,
-                            onClick = {
-                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onDislike()
-                                scope.launch {
-                                    dislikeFeedback.stop()
-                                    dislikeFeedback.snapTo(0f)
-                                    dislikeFeedback.animateTo(
-                                        targetValue = 1f,
-                                        animationSpec = tween(
-                                            durationMillis = 1100,
-                                            easing = Motion.Standard,
-                                        ),
-                                    )
-                                    dislikeFeedback.snapTo(0f)
-                                }
-                            },
-                        )
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(horizontal = 14.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            // The signed score is the number the shuffle actually reads, so
-                            // it is shown verbatim between the two thumbs.
-                            val scoreText = if (rating > 0) "+$rating" else rating.toString()
-                            val scoreLabel = stringResource(R.string.rating_score)
-                            Text(
-                                text = scoreText,
-                                modifier = Modifier.semantics {
-                                    contentDescription = "$scoreLabel: $scoreText"
-                                },
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = ratingColor(rating),
-                            )
-                        }
-                        ScoreAction(
-                            icon = Icons.Filled.ThumbUp,
-                            description = stringResource(R.string.action_like),
-                            tint = MaterialTheme.colorScheme.primary,
-                            active = rating > LibraryExtras.DEFAULT_RATING,
-                            onClick = onLike,
                         )
                     }
                 }
@@ -796,6 +818,66 @@ private fun ScoreAction(
             modifier = Modifier.size(23.dp),
             tint = if (active) tint else MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+/**
+ * Decodes the song's loudness envelope once and keeps it for the lifetime of the
+ * process. The cached value is available synchronously, so a song played twice paints
+ * its waveform on the first frame.
+ */
+@Composable
+private fun rememberWaveform(uri: Uri, durationMs: Long): FloatArray? {
+    val context = LocalContext.current
+    val amplitude by produceState<FloatArray?>(
+        initialValue = AudioWaveform.peek(uri),
+        key1 = uri,
+    ) {
+        if (value == null) {
+            value = AudioWaveform.load(context, uri, durationMs)
+        }
+    }
+    return amplitude
+}
+
+/** Labelled tile for the maintenance actions shown on a disliked song. */
+@Composable
+private fun NowPlayingAction(
+    icon: ImageVector,
+    label: String,
+    tint: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    NeonPanel(
+        modifier = modifier
+            .height(50.dp)
+            .cyberClick(pressedScale = 0.96f, onClick = onClick),
+        container = tint.copy(alpha = 0.10f),
+        corner = 14.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = tint,
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                color = tint,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

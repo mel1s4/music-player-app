@@ -25,10 +25,21 @@ data class ReorderOutcome(
     val error: ReorderError? = null,
 )
 
+/** One granted library tree: its root document, visible path and directory cache. */
+private class LibraryContext(
+    val root: Uri,
+    val rootPath: String,
+    val directories: MutableMap<String, Uri?> = mutableMapOf(),
+)
+
 /**
- * Rewrites the inside of a folder as `artist/album/song` (or `artist/song` when the
- * track has no album), relative to the selected folder. If the folder already ends with
- * the artist or `artist/album` part, that prefix is not repeated.
+ * Files songs at the **root of their Music Library** as `artist/album/song` (or
+ * `artist/song` when the track has no album).
+ *
+ * The selected folder is only the source scope. Reordering a nested `Downloads` folder
+ * moves its songs into the library's existing artist/album tree instead of creating a
+ * second tree inside `Downloads`. If the library root itself ends with the artist or
+ * `artist/album`, that prefix is not repeated.
  *
  * The metadata is the scan's own [Track] data, so this never reopens the audio files.
  * Files without an artist are left alone, and files already inside the expected folder
@@ -43,7 +54,6 @@ object FolderReorder {
 
     suspend fun reorder(
         context: Context,
-        folderPath: String,
         tracks: List<Track>,
         onMoved: (MovedTrack) -> Unit = {},
         onProgress: (completed: Int, total: Int, title: String) -> Unit = { _, _, _ -> },
@@ -52,18 +62,8 @@ object FolderReorder {
             return@withContext ReorderOutcome(error = ReorderError.NoTracks)
         }
 
-        val root = resolveFolderUri(tracks.first(), folderPath)
-        if (root == null || !isDirectory(context, root)) {
-            return@withContext ReorderOutcome(
-                failed = tracks.size,
-                error = ReorderError.FolderNotWritable,
-            )
-        }
-
-        val treeId = runCatching { DocumentsContract.getTreeDocumentId(tracks.first().uri) }
-            .getOrNull()
         val ordered = tracks.sortedBy { it.title.lowercase() }
-        val directories = mutableMapOf<String, Uri?>()
+        val libraries = mutableMapOf<String, LibraryContext?>()
         val moved = mutableListOf<MovedTrack>()
         var alreadySorted = 0
         var missingArtist = 0
@@ -72,15 +72,18 @@ object FolderReorder {
         ordered.forEachIndexed { index, track ->
             onProgress(index, ordered.size, track.title)
 
-            // Two libraries can expose the same visible path. Never move a file out of
-            // one granted tree into another just because the folder names match.
-            if (treeId != null) {
-                val trackTree = runCatching { DocumentsContract.getTreeDocumentId(track.uri) }
-                    .getOrNull()
-                if (trackTree != treeId) {
-                    failed++
-                    return@forEachIndexed
-                }
+            val treeId = runCatching { DocumentsContract.getTreeDocumentId(track.uri) }
+                .getOrNull()
+            if (treeId == null) {
+                failed++
+                return@forEachIndexed
+            }
+            val library = libraries.getOrPut(treeId) {
+                resolveLibrary(context, track, treeId)
+            }
+            if (library == null) {
+                failed++
+                return@forEachIndexed
             }
 
             val artist = sanitizeName(track.artist.orEmpty())
@@ -90,11 +93,11 @@ object FolderReorder {
             }
             val album = sanitizeName(track.album.orEmpty())
             val targetSegments = relativeTargetSegments(
-                folderPath,
+                library.rootPath,
                 listOfNotNull(artist, album.takeIf { it.isNotEmpty() }),
             )
 
-            val targetFolder = (listOf(folderPath.trim('/')) + targetSegments)
+            val targetFolder = (listOf(library.rootPath.trim('/')) + targetSegments)
                 .filter { it.isNotEmpty() }
                 .joinToString("/")
             if (samePath(track.folder, targetFolder)) {
@@ -102,7 +105,12 @@ object FolderReorder {
                 return@forEachIndexed
             }
 
-            val targetDirectory = ensureDirectory(context, root, targetSegments, directories)
+            val targetDirectory = ensureDirectory(
+                context,
+                library.root,
+                targetSegments,
+                library.directories,
+            )
             if (targetDirectory == null) {
                 failed++
                 return@forEachIndexed
@@ -125,6 +133,12 @@ object FolderReorder {
         }
 
         onProgress(ordered.size, ordered.size, "")
+        if (failed == ordered.size) {
+            return@withContext ReorderOutcome(
+                failed = failed,
+                error = ReorderError.FolderNotWritable,
+            )
+        }
         ReorderOutcome(
             moved = moved,
             alreadySorted = alreadySorted,
@@ -134,48 +148,41 @@ object FolderReorder {
     }
 
     /**
-     * The folder's own URI, derived from a track inside it.
-     *
-     * Files only expose their document id, and a folder at this level has no row of its
-     * own to remember a URI for. Removing the path below the selected folder from a
-     * descendant's id gives the folder back without an extra walk from the tree root.
+     * The granted tree root for a track's file. A folder can be nested arbitrarily deep
+     * inside the library; the tree document id always points at the library root, which
+     * is exactly where reordered songs belong.
      */
-    private fun resolveFolderUri(track: Track, folderPath: String): Uri? {
-        val folder = normalizedPath(track.folder)
-        val selected = normalizedPath(folderPath)
-        if (selected.isEmpty()) return null
-
-        val below = when {
-            folder.equals(selected, ignoreCase = true) -> ""
-            folder.length > selected.length &&
-                folder.regionMatches(0, selected, 0, selected.length, ignoreCase = true) &&
-                folder[selected.length] == '/' -> folder.substring(selected.length + 1)
-            else -> return null
-        }
-        val depth = below.split('/').count { it.isNotBlank() }
-
-        val documentId = runCatching { DocumentsContract.getDocumentId(track.uri) }.getOrNull()
-            ?: return null
-        val volume = documentId.substringBefore(':', "")
-        val path = documentId.substringAfter(':', documentId)
-        val parts = path.split('/').filter { it.isNotEmpty() }
-        // Drop the file itself and the folders between it and the selected folder.
-        if (parts.size <= depth + 1) return null
-        val folderPathId = parts.dropLast(depth + 1).joinToString("/")
-        if (folderPathId.isEmpty()) return null
-
-        val folderId = if (volume.isNotEmpty()) "$volume:$folderPathId" else folderPathId
-        return runCatching {
-            DocumentsContract.buildDocumentUriUsingTree(track.uri, folderId)
-        }.getOrNull()
+    private fun resolveLibrary(context: Context, track: Track, treeId: String): LibraryContext? {
+        val root = runCatching {
+            DocumentsContract.buildDocumentUriUsingTree(track.uri, treeId)
+        }.getOrNull() ?: return null
+        if (!isDirectory(context, root)) return null
+        return LibraryContext(
+            root = root,
+            rootPath = folderPathForDocumentId(treeId),
+        )
     }
 
     /**
-     * Drops the part of `artist/album` that the selected folder already ends with.
+     * "primary:Music/SyncMusic" -> "/Music/SyncMusic". The Files screen and [Track]
+     * store folder paths the same way, so the two can be compared directly.
+     */
+    private fun folderPathForDocumentId(documentId: String): String {
+        val volume = documentId.substringBefore(':', "")
+        val path = documentId.substringAfter(':', documentId)
+        return buildString {
+            if (volume.isNotEmpty() && volume != "primary") append('/').append(volume)
+            if (path.isNotEmpty()) append('/').append(path)
+            if (isEmpty()) append('/')
+        }
+    }
+
+    /**
+     * Drops the part of `artist/album` that the library root already ends with.
      *
-     * Reordering the library root must create `artist/album`, but reordering an artist
-     * folder must create only `album`; otherwise the artist ends up nested inside
-     * itself. The comparison is case-insensitive, like the "already in place" check.
+     * A library rooted at `Music` gets `artist/album` folders. A library that itself
+     * points at an artist folder must not create `Artist/Artist` inside it. The
+     * comparison is case-insensitive, like the "already in place" check.
      */
     private fun relativeTargetSegments(selectedPath: String, target: List<String>): List<String> {
         val selected = normalizedPath(selectedPath).split('/').filter { it.isNotBlank() }

@@ -9,8 +9,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * The app's own database: favourites, ratings, tags, playlists, first-seen stamps and
- * listening history.
+ * The app's own database: favourites, ratings, tags, playlists, first-seen stamps,
+ * listening history and the pending metadata queue.
  *
  * It lives in SQLite rather than SharedPreferences because these are relational lists
  * that grow with the library and are queried/filtered constantly (tags by URI, tracks
@@ -63,6 +63,25 @@ class LibraryStore(context: Context) : TrackMetaCache {
     fun listenedAt(): Map<String, Long> = buildMap {
         db.query("listens", arrayOf("uri", "last_played"), null, null, null, null, null).use { c ->
             while (c.moveToNext()) put(c.getString(0), c.getLong(1))
+        }
+    }
+
+    /** Edits saved while their track was playing, oldest first. */
+    fun pendingMetadata(): List<PendingMetadata> = buildList {
+        db.query(
+            "pending_meta",
+            arrayOf("uri", "payload", "created_at"),
+            null,
+            null,
+            null,
+            null,
+            "created_at",
+        ).use { c ->
+            while (c.moveToNext()) {
+                val uri = c.getString(0) ?: continue
+                val payload = c.getString(1) ?: continue
+                pendingMetadataFromJson(uri, payload, c.getLong(2))?.let(::add)
+            }
         }
     }
 
@@ -343,6 +362,23 @@ class LibraryStore(context: Context) : TrackMetaCache {
         )
     }
 
+    fun setPendingMetadata(pending: PendingMetadata) {
+        db.insertWithOnConflict(
+            "pending_meta",
+            null,
+            ContentValues().apply {
+                put("uri", pending.uri)
+                put("payload", pending.toJson())
+                put("created_at", pending.createdAt)
+            },
+            SQLiteDatabase.CONFLICT_REPLACE,
+        )
+    }
+
+    fun deletePendingMetadata(uri: String) {
+        db.delete("pending_meta", "uri = ?", arrayOf(uri))
+    }
+
     // ------------------------------------------------------------- playlists
 
     fun insertPlaylist(playlist: Playlist) {
@@ -422,7 +458,15 @@ class LibraryStore(context: Context) : TrackMetaCache {
      */
     fun rekey(oldUri: String, newUri: String) {
         if (oldUri == newUri) return
-        val tables = listOf("favorites", "ratings", "tags", "playlist_tracks", "tracks", "listens")
+        val tables = listOf(
+            "favorites",
+            "ratings",
+            "tags",
+            "playlist_tracks",
+            "tracks",
+            "listens",
+            "pending_meta",
+        )
         db.beginTransaction()
         try {
             tables.forEach { table ->
@@ -464,6 +508,7 @@ class LibraryStore(context: Context) : TrackMetaCache {
             createTrackMeta(db)
             createStarredFolders(db)
             createListens(db)
+            createPendingMetadata(db)
             db.execSQL("CREATE INDEX tags_uri ON tags(uri)")
             db.execSQL("CREATE INDEX playlist_tracks_list ON playlist_tracks(playlist_id)")
             migrateFromPreferences(db)
@@ -485,6 +530,17 @@ class LibraryStore(context: Context) : TrackMetaCache {
             if (oldVersion < 5) {
                 createListens(db)
             }
+            if (oldVersion < 6) {
+                createPendingMetadata(db)
+            }
+        }
+
+        private fun createPendingMetadata(db: SQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS pending_meta (" +
+                    "uri TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, " +
+                    "created_at INTEGER NOT NULL)",
+            )
         }
 
         private fun createListens(db: SQLiteDatabase) {
@@ -625,6 +681,6 @@ class LibraryStore(context: Context) : TrackMetaCache {
 
     private companion object {
         const val DB_NAME = "library.db"
-        const val DB_VERSION = 5
+        const val DB_VERSION = 6
     }
 }

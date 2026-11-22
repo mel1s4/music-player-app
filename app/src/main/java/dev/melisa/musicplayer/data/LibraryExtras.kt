@@ -73,6 +73,13 @@ class LibraryExtras(context: Context) {
     var listenedAt by mutableStateOf(store.listenedAt())
         private set
 
+    /**
+     * Metadata edits waiting for their track to stop playing before the file is
+     * rewritten. Persisted, so closing and reopening the app still applies them.
+     */
+    var pendingMetadata by mutableStateOf(store.pendingMetadata())
+        private set
+
     fun isFavorite(uri: String): Boolean = favorites.contains(uri)
 
     fun isFolderStarred(path: String): Boolean = starredFolders.contains(path)
@@ -161,6 +168,10 @@ class LibraryExtras(context: Context) {
         if (listenedAt.containsKey(uri)) {
             listenedAt = listenedAt - uri
             store.deleteListen(uri)
+        }
+        if (pendingMetadata.any { it.uri == uri }) {
+            pendingMetadata = pendingMetadata.filterNot { it.uri == uri }
+            store.deletePendingMetadata(uri)
         }
         val affected = playlists.filter { it.trackUris.contains(uri) }
         if (affected.isNotEmpty()) {
@@ -253,6 +264,9 @@ class LibraryExtras(context: Context) {
         addedAt = addedAt[oldUri]?.let { addedAt - oldUri + (newUri to it) } ?: addedAt
         ratings = ratings[oldUri]?.let { ratings - oldUri + (newUri to it) } ?: ratings
         listenedAt = listenedAt[oldUri]?.let { listenedAt - oldUri + (newUri to it) } ?: listenedAt
+        pendingMetadata = pendingMetadata.map { pending ->
+            if (pending.uri == oldUri) pending.copy(uri = newUri) else pending
+        }
         playlists = playlists.map { playlist ->
             if (playlist.trackUris.contains(oldUri)) {
                 playlist.copy(trackUris = playlist.trackUris.map { if (it == oldUri) newUri else it })
@@ -296,6 +310,58 @@ class LibraryExtras(context: Context) {
     }
 
     fun addedAt(uri: String): Long? = addedAt[uri]
+
+    fun pendingMetadataFor(uri: String): PendingMetadata? =
+        pendingMetadata.firstOrNull { it.uri == uri }
+
+    /** Queues an edit that must not touch the file until its track stops playing. */
+    fun queueMetadataEdit(uri: String, metadata: SongMetadata, fileName: String) {
+        val pending = PendingMetadata(
+            uri = uri,
+            metadata = metadata,
+            fileName = fileName,
+            createdAt = System.currentTimeMillis(),
+        )
+        pendingMetadata = pendingMetadata.filterNot { it.uri == uri } + pending
+        store.setPendingMetadata(pending)
+    }
+
+    /** Drops a queued edit after it was applied, or when its file disappears. */
+    fun clearPendingMetadata(uri: String) {
+        if (pendingMetadata.none { it.uri == uri }) return
+        pendingMetadata = pendingMetadata.filterNot { it.uri == uri }
+        store.deletePendingMetadata(uri)
+    }
+
+    /**
+     * Writes the edited fields into the scan cache under the current URI.
+     *
+     * The file itself has not been touched yet, so its size and modification time still
+     * match; a rescan between the edit and the deferred write will therefore keep the
+     * new metadata instead of reverting to the old tags.
+     */
+    fun cacheEditedMetadata(
+        track: Track,
+        title: String,
+        artist: String?,
+        album: String?,
+        year: String,
+    ) {
+        store.saveTrackMeta(
+            listOf(
+                CachedTrackMeta(
+                    uri = track.uri.toString(),
+                    sizeBytes = track.sizeBytes,
+                    modifiedMs = track.lastModifiedMs,
+                    title = title,
+                    artist = artist,
+                    album = album,
+                    year = year,
+                    durationMs = track.durationMs,
+                ),
+            ),
+        )
+    }
 
     /**
      * Records that [uri] has been heard. The player calls this once a track has actually

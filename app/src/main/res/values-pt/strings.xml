@@ -62,6 +62,7 @@
     <string name="action_shuffle">Aleatório</string>
     <string name="action_previous">Anterior</string>
     <string name="action_next">Próxima</string>
+    <string name="seek_song">Navegar na música</string>
     <string name="action_love">Favorito</string>
     <string name="action_add_to_playlist">Adicionar à playlist</string>
     <string name="action_manage_tags">Gerenciar etiquetas</string>

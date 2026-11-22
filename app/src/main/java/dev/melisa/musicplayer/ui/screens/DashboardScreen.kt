@@ -11,31 +11,28 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RestartAlt
-import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -48,17 +45,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.melisa.musicplayer.R
 import dev.melisa.musicplayer.data.LibraryExtras
 import dev.melisa.musicplayer.data.Track
 import dev.melisa.musicplayer.data.deleteSongFile
+import dev.melisa.musicplayer.ui.components.BrowseTile
 import dev.melisa.musicplayer.ui.components.CyberBadge
 import dev.melisa.musicplayer.ui.components.CyberDivider
 import dev.melisa.musicplayer.ui.components.EqualizerBars
-import dev.melisa.musicplayer.ui.components.LiveDot
 import dev.melisa.musicplayer.ui.components.MessageState
 import dev.melisa.musicplayer.ui.components.NeonPanel
 import dev.melisa.musicplayer.ui.components.ScanningState
@@ -68,15 +64,15 @@ import dev.melisa.musicplayer.ui.components.RatingIcon
 import dev.melisa.musicplayer.ui.theme.Cyber
 import dev.melisa.musicplayer.ui.theme.Motion
 import dev.melisa.musicplayer.ui.theme.cyberClick
-import dev.melisa.musicplayer.ui.theme.neonGlow
 import kotlinx.coroutines.launch
 
 /**
- * Library overview plus the rating lists that the weighted shuffle reads from.
+ * Browse hub plus the rating lists that the weighted shuffle reads from.
  *
- * "Most liked" and "Most disliked" are just the tails of the same score distribution:
- * everyone starts at [LibraryExtras.DEFAULT_RATING], so anything above or below that
- * is a deliberate like/dislike.
+ * The four tiles lead to Songs, Files, Albums and Artists; the library summary itself
+ * lives at the top of Songs now. "Most liked" and "Most disliked" are just the tails of
+ * the same score distribution: everyone starts at [LibraryExtras.DEFAULT_RATING], so
+ * anything above or below that is a deliberate like/dislike.
  */
 @Composable
 fun DashboardScreen(
@@ -85,8 +81,10 @@ fun DashboardScreen(
     nowPlaying: Track?,
     isPlaying: Boolean,
     onPlay: (Track, List<Track>) -> Unit,
-    onRescan: () -> Unit,
-    onFreeSpace: () -> Unit,
+    onOpenSongs: () -> Unit,
+    onOpenFiles: () -> Unit,
+    onOpenAlbums: () -> Unit,
+    onOpenArtists: () -> Unit,
     onOpenSettings: () -> Unit,
     onFilesDeleted: () -> Unit,
 ) {
@@ -111,11 +109,6 @@ fun DashboardScreen(
         .take(5)
         .map { it.second }
 
-    val songs = rated.size
-    val albums = rated.mapNotNull { it.album?.takeIf { name -> name.isNotBlank() } }.distinct().size
-    val hours = rated.sumOf { it.durationMs } / 3_600_000.0
-    val sizeBytes = rated.sumOf { it.sizeBytes }
-
     when {
         tracks == null -> ScanningState()
         tracks.isEmpty() -> MessageState(
@@ -134,14 +127,49 @@ fun DashboardScreen(
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             item {
-                LibraryHero(
-                    songs = songs,
-                    albums = albums,
-                    sizeBytes = sizeBytes,
-                    hours = hours,
-                    onRescan = onRescan,
-                    onFreeSpace = onFreeSpace,
-                )
+                Column(
+                    modifier = Modifier.padding(top = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        BrowseTile(
+                            icon = Icons.Filled.PlayArrow,
+                            label = stringResource(R.string.nav_songs),
+                            accent = MaterialTheme.colorScheme.primary,
+                            onClick = onOpenSongs,
+                            modifier = Modifier.weight(1f),
+                        )
+                        BrowseTile(
+                            icon = Icons.Filled.Folder,
+                            label = stringResource(R.string.nav_files),
+                            accent = MaterialTheme.colorScheme.secondary,
+                            onClick = onOpenFiles,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        BrowseTile(
+                            icon = Icons.Filled.Album,
+                            label = stringResource(R.string.nav_albums),
+                            accent = MaterialTheme.colorScheme.tertiary,
+                            onClick = onOpenAlbums,
+                            modifier = Modifier.weight(1f),
+                        )
+                        BrowseTile(
+                            icon = Icons.Filled.Person,
+                            label = stringResource(R.string.nav_artists),
+                            accent = MaterialTheme.colorScheme.primary,
+                            onClick = onOpenArtists,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
             }
 
             if (recent.isNotEmpty()) {
@@ -358,93 +386,6 @@ fun DashboardScreen(
     }
 }
 
-/** The first thing on screen: how big the library is and the two upkeep actions. */
-@Composable
-private fun LibraryHero(
-    songs: Int,
-    albums: Int,
-    sizeBytes: Long,
-    hours: Double,
-    onRescan: () -> Unit,
-    onFreeSpace: () -> Unit,
-) {
-    neonGlowPanel {
-        Column(modifier = Modifier.padding(22.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                SectionKicker(text = stringResource(R.string.dashboard_library))
-                Spacer(Modifier.weight(1f))
-                LiveDot(color = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = "LOCAL",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-
-            Spacer(Modifier.height(18.dp))
-
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    text = songs.toString(),
-                    style = MaterialTheme.typography.displaySmall.copy(fontFamily = FontFamily.Monospace),
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Spacer(Modifier.width(12.dp))
-                Column(modifier = Modifier.padding(bottom = 4.dp)) {
-                    Text(
-                        text = stringResource(R.string.stat_songs).uppercase(),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Text(
-                        text = formatLibrarySize(sizeBytes, albums) +
-                            " · " + "%.1f".format(hours) + " " + stringResource(R.string.stat_hours).lowercase(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(20.dp))
-
-            // Two CTAs side by side at normal type sizes; stacked once the user
-            // enlarges text, because "Free up space" must never be cut off.
-            val stackedActions = androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.15f
-            if (stackedActions) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    RescanButton(onRescan, Modifier.fillMaxWidth())
-                    FreeUpSpaceButton(onFreeSpace, Modifier.fillMaxWidth())
-                }
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    RescanButton(onRescan, Modifier.weight(1f))
-                    FreeUpSpaceButton(onFreeSpace, Modifier.weight(1f))
-                }
-            }
-        }
-    }
-}
-
-/**
- * Storage used by the library, rounded the way people read it: one decimal for GB,
- * no decimals once the number is large enough that they stop mattering. Falls back to
- * the album count when the storage provider does not report file sizes.
- */
-@Composable
-private fun formatLibrarySize(bytes: Long, albums: Int): String {
-    if (bytes <= 0L) return "$albums " + stringResource(R.string.stat_albums).lowercase()
-    val mb = bytes / 1_048_576.0
-    return when {
-        mb >= 1024.0 -> "%.1f GB".format(mb / 1024.0)
-        mb >= 100.0 -> "%.0f MB".format(mb)
-        else -> "%.1f MB".format(mb)
-    }
-}
-
 @Composable
 private fun SectionRow(
     title: String,
@@ -615,64 +556,5 @@ private fun RatingRow(
         // Icon only: at list size the thumb says "liked / disliked" faster than any
         // label, and the bar that used to sit underneath read as a second border.
         RatingIcon(score = score, size = 22.dp)
-    }
-}
-
-/** Library hero panel: big, glowing, and the only large green surface on the screen. */
-@Composable
-private fun neonGlowPanel(content: @Composable () -> Unit) {
-    // Small wrapper keeps the glow off the composable's own signature.
-    NeonPanel(
-        container = MaterialTheme.colorScheme.surfaceContainerHigh,
-        corner = 26.dp,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        content()
-    }
-}
-
-@Composable
-private fun RescanButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Button(
-        onClick = onClick,
-        modifier = modifier
-            .height(54.dp)
-            .neonGlow(
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                radius = 10.dp,
-                shape = RoundedCornerShape(16.dp),
-            ),
-        shape = RoundedCornerShape(16.dp),
-        contentPadding = PaddingValues(horizontal = 12.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-        ),
-    ) {
-        Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(22.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = stringResource(R.string.dashboard_rescan),
-            style = MaterialTheme.typography.labelLarge,
-            maxLines = 1,
-        )
-    }
-}
-
-@Composable
-private fun FreeUpSpaceButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = modifier.height(54.dp),
-        shape = RoundedCornerShape(16.dp),
-        contentPadding = PaddingValues(horizontal = 12.dp),
-    ) {
-        Icon(Icons.Filled.Storage, contentDescription = null, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = stringResource(R.string.settings_free_space),
-            style = MaterialTheme.typography.labelLarge,
-            maxLines = 1,
-        )
     }
 }

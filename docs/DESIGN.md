@@ -151,6 +151,12 @@ that state is false; no decorative animation runs forever on a static screen.
 **Player**
 - Persistent mini player with artwork, title, live equalizer, progress LED bar, play and
   next — controls mirror to the holding hand (`Left` / `Right` in Settings).
+- The progress control is a **waveform**, not a line: rounded bars show the RMS loudness
+  of the decoded audio (72 buckets), the played side fills with accent green and the
+  rest stays muted, and a vertical playhead with a small glow marks the position. Tap or
+  drag anywhere to seek. Long tracks are sampled in 72 short windows so the envelope
+  arrives quickly; short tracks decode in full, results stay in an in-memory cache, and
+  a quiet placeholder keeps the control usable while analysis runs.
 - Swipe the mini player up to open the player. Inside it, swipe **down** on the header
   or artwork to hide the player, and swipe **up** on either to open the song editor.
 - Swipe the Now Playing artwork sideways to change song: left is next, right is previous. The
@@ -177,13 +183,20 @@ that state is false; no decorative animation runs forever on a static screen.
   The phrase survives only as the icon's accessibility description. The player shows
   the score once, in that panel — there is no duplicate badge beside the artist; that
   slot belongs to the metadata pencil instead.
+- The rating panel sits at the **top** of the Now Playing sheet, directly under the
+  header and above the artwork, so the score and thumbs are visible without scrolling.
+- When the current score is negative, two labelled tiles slide in above the thumbs:
+  **Delete** (magenta, opens the file-deletion confirmation) and **Compress audio**
+  (lime, opens the bitrate picker for that song). They are absent at neutral and
+  positive scores, so maintenance stays out of the player until the user has actually
+  marked the song as disliked.
 
 **Dashboard**
-- Hero panel answers "what do I have?" (songs / storage used / hours) and "what do I do?"
-  (Rescan / Free up space) in one card. Storage is the sum of track file sizes, shown in MB
-  or GB; if a provider reports no sizes it falls back to the album count.
-- **"Recently added" is the first section under the hero**: the five newest tracks with
-  cover tile, artist and a locale-aware relative stamp ("hace 40 min", "11 sept").
+- The Dashboard is the browse hub: a 2 × 2 grid of **Songs, Files, Albums and Artists**
+  entries, each with its own accent and a large touch target. The library hero that
+  used to sit here now tops the Songs page, next to the tracks it describes.
+- **"Recently added" is the first list under the browse grid**: the five newest tracks
+  with cover tile, artist and a locale-aware relative stamp ("hace 40 min", "11 sept").
   It is a preview, so the section carries no count badge.
 - The first time a track URI is seen it is stamped in `LibraryExtras.addedAt`, seeded
   with the file's own modification time when the provider exposes it, and persisted.
@@ -195,9 +208,12 @@ that state is false; no decorative animation runs forever on a static screen.
 - Empty library becomes a real empty state with a route to Settings.
 
 **Songs**
+- The library hero is now the first thing here: song count, storage used, hours, and the
+  **Rescan** / **Free up space** actions. The Dashboard keeps its browse grid, while this
+  page shows the summary next to the actual list.
 - Count badge, **sort menu (date added / title / artist / duration)** defaulting to newest
-  added first, shuffle-all, and three large
-  browse tiles (Files, Albums, Artists) that replaced three small outlined pills.
+  added first, and shuffle-all. The three browse tiles moved to the Dashboard, so the
+  song list starts closer to the top.
 
 **Search**
 - Auto-focus, clear button, animated focus ring, result count, sectioned results with
@@ -257,10 +273,12 @@ that state is false; no decorative animation runs forever on a static screen.
   tree on every draw, so a folder that was moved or deleted simply drops out.
 - Long-pressing a folder opens a small menu with **Reorder contents**. It uses the
   scanned metadata and moves each song into `artist/album/` (or `artist/` when the
-  album is missing), keeping the file name. Songs without an artist stay put, and files
-  already in the expected folder are skipped. Every move re-keys the database and the
-  playback queue, so ratings, tags, favourites, listening history, playlist entries and
-  the current playback position survive the new path.
+  album is missing) **at the root of the library that contains the folder**, keeping
+  the file name. A nested `Downloads` folder therefore merges into the existing
+  artist/album tree instead of creating a second one inside `Downloads`. Songs without
+  an artist stay put, and files already in the expected folder are skipped. Every move
+  re-keys the database and the playback queue, so ratings, tags, favourites, listening
+  history, playlist entries and the current playback position survive the new path.
 - In the metadata editor, the artist and album fields keep free text and open a
   height-capped, scrollable autocomplete panel while typing. Exact and prefix matches
   come first, and a brand-new name is always allowed.
@@ -276,6 +294,11 @@ that state is false; no decorative animation runs forever on a static screen.
   fields keep the full width.
 - **Save** is a sticky bottom bar: it sits directly above the keyboard while the form
   scrolls, so the primary action is always in reach.
+- Saving an edit to the **currently playing** song does not rewrite the file under the
+  decoder. The app updates its own view immediately, queues the real tag write (and any
+  rename) in `pending_meta`, and applies it when playback pauses, the track changes, or
+  the app is reopened. Reopening the editor shows the queued values, and the queue
+  survives a restart, so an edit is never lost just because playback kept going.
 - The file summary offers **Hear the difference**, which opens the bitrate audition
   helper described in section 10.
 
@@ -361,6 +384,7 @@ Library data lives in its own SQLite database, `library.db`, through
 | `playlist_tracks` | ordered URIs per playlist |
 | `tracks` | first-seen timestamp per URI ("Recently added") |
 | `listens` | play count and last-played timestamp per URI ("Unheard songs") |
+| `pending_meta` | metadata edits waiting for their track to stop playing |
 | `starred_folders` | File Explorer folder paths pinned by the user |
 
 `LibraryExtras` keeps its existing public API and mirrors the database into Compose

@@ -105,13 +105,18 @@ import dev.melisa.musicplayer.data.CompressOutcome
 import dev.melisa.musicplayer.data.FolderReorder
 import dev.melisa.musicplayer.data.HoldingHand
 import dev.melisa.musicplayer.data.LibraryExtras
+import dev.melisa.musicplayer.data.MetadataApplyOutcome
+import dev.melisa.musicplayer.data.MetadataWriteFailure
 import dev.melisa.musicplayer.data.MovedTrack
 import dev.melisa.musicplayer.data.MusicLibrary
+import dev.melisa.musicplayer.data.PendingMetadataWriter
 import dev.melisa.musicplayer.data.ReorderError
 import dev.melisa.musicplayer.data.SongArt
 import dev.melisa.musicplayer.data.SongFileSync
+import dev.melisa.musicplayer.data.SongMetadata
 import dev.melisa.musicplayer.data.Track
 import dev.melisa.musicplayer.data.deleteSongFile
+import dev.melisa.musicplayer.data.songFileInfo
 import dev.melisa.musicplayer.data.weightedShuffle
 import dev.melisa.musicplayer.playback.PlaybackService
 import dev.melisa.musicplayer.ui.components.AddToPlaylistDialog
@@ -410,6 +415,11 @@ fun MusicPlayerApp(settings: AppSettings) {
     val reorderScope = rememberCoroutineScope()
     val mainHandler = remember { android.os.Handler(android.os.Looper.getMainLooper()) }
 
+    // Metadata edits that must wait for playback to stop before touching the file.
+    var metadataWriteFailure by remember { mutableStateOf<MetadataWriteFailure?>(null) }
+    val metadataScope = rememberCoroutineScope()
+    var metadataFlushJob by remember { mutableStateOf<Job?>(null) }
+
     /**
      * A top-level destination change closes whatever album/artist page was open on top
      * of the old tab. Without this the new tab renders underneath the old page and the
@@ -562,6 +572,87 @@ fun MusicPlayerApp(settings: AppSettings) {
         if (editingTrack?.uri == oldUri) editingTrack = editingTrack?.copy(uri = newUri)
     }
 
+    /**
+     * Updates the app's view of an edited song immediately, but leaves the file alone
+     * while it is playing. The file is written by the pending-edit job once the track
+     * is paused or replaced.
+     */
+    fun queueDeferredMetadata(track: Track, metadata: SongMetadata, fileName: String) {
+        val title = metadata.title.ifBlank {
+            songFileInfo(track.uri).name.substringBeforeLast('.').ifBlank { track.title }
+        }
+        val artist = metadata.artist.takeIf { it.isNotBlank() }
+        val album = metadata.album.takeIf { it.isNotBlank() }
+        val updated = track.copy(
+            title = title,
+            artist = artist,
+            album = album,
+            year = metadata.year,
+        )
+
+        tracks = tracks?.map { if (it.uri == track.uri) updated else it }
+        if (nowPlaying?.uri == track.uri) nowPlaying = updated
+        // The file still has its old size/mtime, so the scan cache keeps the edited
+        // values instead of reverting until the deferred write happens.
+        extras.cacheEditedMetadata(updated, title, artist, album, metadata.year)
+        extras.queueMetadataEdit(track.uri.toString(), metadata, fileName)
+    }
+
+    // A queued edit waits until its own track is no longer actively playing. Pausing,
+    // changing track, or relaunching makes the pending list eligible; another track may
+    // keep playing in the meantime without blocking the write.
+    LaunchedEffect(controller, nowPlaying?.uri, isPlaying, extras.pendingMetadata) {
+        if (controller == null) return@LaunchedEffect
+        if (metadataFlushJob?.isActive == true) return@LaunchedEffect
+        if (controller.isPlaying && nowPlaying == null) return@LaunchedEffect
+        if (extras.pendingMetadata.isEmpty()) return@LaunchedEffect
+
+        metadataFlushJob = metadataScope.launch {
+            // A seek or a buffer underrun can drop isPlaying for a frame. Let the
+            // player settle before treating that as the pause the edit is waiting for.
+            delay(600L)
+            val failedThisPass = mutableSetOf<String>()
+            try {
+                while (true) {
+                    val playing = controller?.isPlaying == true
+                    val pending = extras.pendingMetadata.firstOrNull { item ->
+                        item.uri !in failedThisPass &&
+                            !(playing && nowPlaying?.uri?.toString() == item.uri)
+                    } ?: break
+
+                    when (val outcome = PendingMetadataWriter.apply(context, pending)) {
+                        is MetadataApplyOutcome.Success -> {
+                            extras.clearPendingMetadata(pending.uri)
+                            if (outcome.newUri != outcome.oldUri) {
+                                applyMovedTrack(MovedTrack(outcome.oldUri, outcome.newUri))
+                            } else if (nowPlaying?.uri == outcome.oldUri) {
+                                val position = controller?.currentPosition
+                                    ?.coerceAtLeast(0L) ?: positionMs
+                                // The job may outlive the composition that started it;
+                                // never resume from a stale captured isPlaying. This
+                                // write only happens while the track is paused or gone.
+                                reopenPlayingTrack(
+                                    outcome.oldUri,
+                                    outcome.newUri,
+                                    position,
+                                    fallbackWasPlaying = false,
+                                )
+                            }
+                            refreshToken++
+                        }
+
+                        is MetadataApplyOutcome.Failed -> {
+                            metadataWriteFailure = outcome.failure
+                            failedThisPass += pending.uri
+                        }
+                    }
+                }
+            } finally {
+                metadataFlushJob = null
+            }
+        }
+    }
+
     /** Reorganises one folder as artist/album/song, then tracks the new URIs. */
     fun startReorderFolder(folderPath: String, folderTracks: List<Track>) {
         if (reorderState?.running == true) return
@@ -585,7 +676,6 @@ fun MusicPlayerApp(settings: AppSettings) {
             try {
                 val outcome = FolderReorder.reorder(
                     context = context,
-                    folderPath = folderPath,
                     tracks = folderTracks,
                     onMoved = { moved -> mainHandler.post { applyMovedTrack(moved) } },
                     onProgress = { completed, total, title ->
@@ -875,8 +965,10 @@ fun MusicPlayerApp(settings: AppSettings) {
                             nowPlaying = nowPlaying,
                             isPlaying = isPlaying,
                             onPlay = { track, queue -> play(track, queue) },
-                            onRescan = { refreshToken++ },
-                            onFreeSpace = { showFreeSpace = true },
+                            onOpenSongs = { navigate(Destination.Songs) },
+                            onOpenFiles = { navigate(Destination.Files) },
+                            onOpenAlbums = { navigate(Destination.Albums) },
+                            onOpenArtists = { navigate(Destination.Artists) },
                             onOpenSettings = { navigate(Destination.Settings) },
                             onFilesDeleted = { refreshToken++ },
                         )
@@ -895,9 +987,8 @@ fun MusicPlayerApp(settings: AppSettings) {
                             onLike = { extras.like(it.uri.toString()) },
                             onDislike = { dislike(it) },
                             onDelete = { deleteTarget = it },
-                            onOpenFiles = { navigate(Destination.Files) },
-                            onOpenAlbums = { navigate(Destination.Albums) },
-                            onOpenArtists = { navigate(Destination.Artists) },
+                            onRescan = { refreshToken++ },
+                            onFreeSpace = { showFreeSpace = true },
                         )
                         Destination.Files -> FilesScreen(
                             tracks = tracks,
@@ -1077,6 +1168,8 @@ fun MusicPlayerApp(settings: AppSettings) {
                     rating = extras.rating(playing.uri.toString()),
                     onLike = { extras.like(playing.uri.toString()) },
                     onDislike = { dislike(playing) },
+                    onDelete = { deleteTarget = playing },
+                    onCompress = { openCompress(listOf(playing)) },
                     onGoToFolder = {
                         filesPath = playing.folder.trimStart('/')
                         showNowPlaying = false
@@ -1147,7 +1240,12 @@ fun MusicPlayerApp(settings: AppSettings) {
                 knownArtists = knownArtists,
                 knownAlbums = knownAlbums,
                 onClose = { editingTrack = null },
+                pending = extras.pendingMetadataFor(editing.uri.toString()),
+                deferFileWrite = nowPlaying?.uri == editing.uri && isPlaying,
                 onSaved = { newUri ->
+                    // This path writes the file now, so any older deferred edit for
+                    // the same track is superseded.
+                    extras.clearPendingMetadata(editing.uri.toString())
                     val editedIsPlaying = nowPlaying?.uri == editing.uri
                     // Rewriting the file under a live reader is what stops playback
                     // silently; reopen it before the rescan swaps the library list.
@@ -1162,6 +1260,10 @@ fun MusicPlayerApp(settings: AppSettings) {
                     }
                     editingTrack = null
                     refreshToken++
+                },
+                onDeferredSaved = { metadata, fileName ->
+                    queueDeferredMetadata(editing, metadata, fileName)
+                    editingTrack = null
                 },
                 onCompress = { openCompress(listOf(it)) },
                 onHearDifference = { target, details ->
@@ -1240,6 +1342,31 @@ fun MusicPlayerApp(settings: AppSettings) {
                 text = { Text(stringResource(R.string.delete_song_failed)) },
                 confirmButton = {
                     TextButton(onClick = { deleteFailed = false }) {
+                        Text(stringResource(R.string.action_close))
+                    }
+                },
+            )
+        }
+
+        val failedMetadataWrite = metadataWriteFailure
+        if (failedMetadataWrite != null) {
+            AlertDialog(
+                onDismissRequest = { metadataWriteFailure = null },
+                title = { Text(stringResource(R.string.edit_metadata_title)) },
+                text = {
+                    Text(
+                        stringResource(
+                            when (failedMetadataWrite) {
+                                MetadataWriteFailure.Rename -> R.string.metadata_rename_failed
+                                MetadataWriteFailure.NoWritePermission ->
+                                    R.string.metadata_no_write_permission
+                                MetadataWriteFailure.Write -> R.string.metadata_write_failed
+                            },
+                        ),
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = { metadataWriteFailure = null }) {
                         Text(stringResource(R.string.action_close))
                     }
                 },

@@ -21,9 +21,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Album
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.DropdownMenu
@@ -44,8 +41,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -54,12 +49,11 @@ import androidx.compose.ui.unit.dp
 import dev.melisa.musicplayer.R
 import dev.melisa.musicplayer.data.Track
 import dev.melisa.musicplayer.ui.components.CyberBadge
+import dev.melisa.musicplayer.ui.components.LibraryHero
 import dev.melisa.musicplayer.ui.components.MessageState
-import dev.melisa.musicplayer.ui.components.NeonPanel
 import dev.melisa.musicplayer.ui.components.ScanningState
 import dev.melisa.musicplayer.ui.components.SectionKicker
 import dev.melisa.musicplayer.ui.components.SongRow
-import dev.melisa.musicplayer.ui.theme.cyberClick
 import java.text.Normalizer
 import kotlinx.coroutines.launch
 
@@ -95,9 +89,8 @@ fun SongsScreen(
     onLike: (Track) -> Unit,
     onDislike: (Track) -> Unit,
     onDelete: (Track) -> Unit,
-    onOpenFiles: () -> Unit,
-    onOpenAlbums: () -> Unit,
-    onOpenArtists: () -> Unit,
+    onRescan: () -> Unit,
+    onFreeSpace: () -> Unit,
 ) {
     var sort by rememberSaveable { mutableStateOf(TrackSort.DateAdded) }
     var sortMenu by rememberSaveable { mutableStateOf(false) }
@@ -118,6 +111,15 @@ fun SongsScreen(
 
     // Sections and the letter rail only exist for the alphabetical orders; duration
     // and date sorting have no alphabet to jump through.
+    val albums = remember(tracks) {
+        tracks.orEmpty()
+            .mapNotNull { it.album?.takeIf { name -> name.isNotBlank() } }
+            .distinct()
+            .size
+    }
+    val hours = remember(tracks) { tracks.orEmpty().sumOf { it.durationMs } / 3_600_000.0 }
+    val sizeBytes = remember(tracks) { tracks.orEmpty().sumOf { it.sizeBytes } }
+
     val sections = remember(sorted, sort) {
         if (sort == TrackSort.Duration || sort == TrackSort.DateAdded) {
             emptyList()
@@ -189,35 +191,16 @@ fun SongsScreen(
                     .padding(end = if (showIndex) 24.dp else 0.dp),
                 contentPadding = PaddingValues(top = 4.dp, bottom = 16.dp),
             ) {
-                item(key = "browse") {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        BrowseTile(
-                            icon = Icons.Filled.Folder,
-                            label = stringResource(R.string.nav_files),
-                            accent = MaterialTheme.colorScheme.secondary,
-                            onClick = onOpenFiles,
-                            modifier = Modifier.weight(1f),
-                        )
-                        BrowseTile(
-                            icon = Icons.Filled.Album,
-                            label = stringResource(R.string.nav_albums),
-                            accent = MaterialTheme.colorScheme.tertiary,
-                            onClick = onOpenAlbums,
-                            modifier = Modifier.weight(1f),
-                        )
-                        BrowseTile(
-                            icon = Icons.Filled.Person,
-                            label = stringResource(R.string.nav_artists),
-                            accent = MaterialTheme.colorScheme.primary,
-                            onClick = onOpenArtists,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
+                item(key = "hero") {
+                    LibraryHero(
+                        songs = sorted.size,
+                        albums = albums,
+                        sizeBytes = sizeBytes,
+                        hours = hours,
+                        onRescan = onRescan,
+                        onFreeSpace = onFreeSpace,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                    )
                 }
 
                 item(key = "controls") {
@@ -430,44 +413,6 @@ private fun AlphabetRail(
 }
 
 /** Big label-plus-icon target; three of these replace the old outlined pills. */
-@Composable
-private fun BrowseTile(
-    icon: ImageVector,
-    label: String,
-    accent: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    NeonPanel(
-        modifier = modifier
-            .heightIn(min = 82.dp)
-            .cyberClick(pressedScale = 0.96f, onClick = onClick),
-        container = MaterialTheme.colorScheme.surfaceContainer,
-        corner = 18.dp,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = accent,
-                modifier = Modifier.size(22.dp),
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-            )
-        }
-    }
-}
-
 private fun TrackSort.labelRes(): Int = when (this) {
     TrackSort.DateAdded -> R.string.sort_date_added
     TrackSort.Title -> R.string.sort_title
