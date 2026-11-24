@@ -37,6 +37,7 @@ import dev.melisa.musicplayer.data.Track
 import dev.melisa.musicplayer.ui.components.ReorderableTrackList
 import dev.melisa.musicplayer.ui.components.SectionKicker
 import dev.melisa.musicplayer.ui.components.SongEditAction
+import dev.melisa.musicplayer.ui.components.SongGoToAction
 import dev.melisa.musicplayer.ui.components.SongRow
 
 /**
@@ -56,6 +57,7 @@ fun CollectionScreen(
     onPlayAll: (List<Track>, Boolean) -> Unit,
     onAddToPlaylist: (Track) -> Unit,
     onEditSong: (Track, SongEditAction) -> Unit,
+    onGoToSong: (Track, SongGoToAction) -> Unit,
     onCompress: (Track) -> Unit,
     onLike: (Track) -> Unit,
     onDislike: (Track) -> Unit,
@@ -171,6 +173,7 @@ fun CollectionScreen(
                     onClick = { onPlay(track, tracks) },
                     onAddToPlaylist = { onAddToPlaylist(track) },
                     onEdit = { action -> onEditSong(track, action) },
+                    onGoTo = { action -> onGoToSong(track, action) },
                     onCompress = { onCompress(track) },
                     onLike = { onLike(track) },
                     onDislike = { onDislike(track) },

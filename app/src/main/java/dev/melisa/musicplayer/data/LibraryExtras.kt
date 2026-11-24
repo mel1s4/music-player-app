@@ -257,6 +257,24 @@ class LibraryExtras(context: Context) {
     }
 
     /**
+     * Drops the pins on a folder that has been deleted, including pins on folders that
+     * lived inside it. Left behind, those paths would silently reappear in Starred the
+     * next time a folder with the same name is created.
+     */
+    fun forgetFolder(path: String) {
+        val deleted = path.trim('/')
+        if (deleted.isEmpty()) return
+        val gone = starredFolders.filter { starred ->
+            val normalized = starred.trim('/')
+            normalized.equals(deleted, ignoreCase = true) ||
+                normalized.startsWith("$deleted/", ignoreCase = true)
+        }
+        if (gone.isEmpty()) return
+        starredFolders = starredFolders - gone.toSet()
+        gone.forEach { store.setFolderStarred(it, false) }
+    }
+
+    /**
      * A playlist with a non-blank [tagRule] is dynamic: it stores the rule, not the tracks.
      */
     fun createPlaylist(name: String, tagRule: String? = null): Playlist {

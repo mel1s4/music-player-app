@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -63,6 +65,7 @@ import dev.melisa.musicplayer.ui.components.MessageState
 import dev.melisa.musicplayer.ui.components.ScanningState
 import dev.melisa.musicplayer.ui.components.SectionKicker
 import dev.melisa.musicplayer.ui.components.SongEditAction
+import dev.melisa.musicplayer.ui.components.SongGoToAction
 import dev.melisa.musicplayer.ui.components.SongRow
 import dev.melisa.musicplayer.ui.components.TrackSort
 import dev.melisa.musicplayer.ui.components.TrackSortButton
@@ -90,9 +93,11 @@ fun FilesScreen(
     onReorderFolder: (String, List<Track>) -> Unit,
     onMoveFolder: (source: String, destination: String, tracks: List<Track>, destinationTracks: List<Track>) -> Unit,
     onExplodeFolder: (path: String, tracks: List<Track>) -> Unit,
+    onDeleteFolder: (path: String, tracks: List<Track>) -> Unit,
     onPlay: (Track, List<Track>) -> Unit,
     onAddToPlaylist: (Track) -> Unit,
     onEditSong: (Track, SongEditAction) -> Unit,
+    onGoToSong: (Track, SongGoToAction) -> Unit,
     onCompress: (Track) -> Unit,
     onLike: (Track) -> Unit,
     onDislike: (Track) -> Unit,
@@ -231,6 +236,7 @@ fun FilesScreen(
 
             var moveSource by remember { mutableStateOf<FolderNode?>(null) }
             var explodeSource by remember { mutableStateOf<FolderNode?>(null) }
+            var deleteSource by remember { mutableStateOf<FolderNode?>(null) }
             // Only offer folders in the same granted tree, never a descendant of the
             // folder being moved, and never the parent it already lives in.
             val moveCandidates = remember(root, moveSource) {
@@ -310,6 +316,7 @@ fun FilesScreen(
                                     },
                                     onMove = { moveSource = starredNode },
                                     onExplode = { explodeSource = starredNode },
+                                    onDelete = { deleteSource = starredNode },
                                 )
                             }
                             if (listedFolders.isNotEmpty()) {
@@ -333,6 +340,7 @@ fun FilesScreen(
                                 },
                                 onMove = { moveSource = folder },
                                 onExplode = { explodeSource = folder },
+                                onDelete = { deleteSource = folder },
                             )
                         }
                         items(folderTracks, key = { it.uri.toString() }) { track ->
@@ -343,6 +351,7 @@ fun FilesScreen(
                                 onClick = { onPlay(track, playQueue) },
                                 onAddToPlaylist = { onAddToPlaylist(track) },
                                 onEdit = { action -> onEditSong(track, action) },
+                                onGoTo = { action -> onGoToSong(track, action) },
                                 onCompress = { onCompress(track) },
                                 onLike = { onLike(track) },
                                 onDislike = { onDislike(track) },
@@ -405,6 +414,56 @@ fun FilesScreen(
                     },
                     dismissButton = {
                         TextButton(onClick = { explodeSource = null }) {
+                            Text(stringResource(R.string.action_cancel))
+                        }
+                    },
+                )
+            }
+
+            deleteSource?.let { source ->
+                val count = source.allTracks().size
+                AlertDialog(
+                    onDismissRequest = { deleteSource = null },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Filled.Delete,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    },
+                    title = { Text(stringResource(R.string.folder_delete_title)) },
+                    text = {
+                        Column {
+                            Text(stringResource(R.string.folder_delete_confirm, source.name))
+                            // Spelling out how many songs disappear makes the scope of a
+                            // folder delete concrete; the folder's own name alone hides it.
+                            Text(
+                                text = pluralStringResource(
+                                    R.plurals.folder_delete_songs,
+                                    count,
+                                    count,
+                                ),
+                                modifier = Modifier.padding(top = 8.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                deleteSource = null
+                                onDeleteFolder(source.path, source.allTracks())
+                            },
+                        ) {
+                            Text(
+                                text = stringResource(R.string.action_delete),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { deleteSource = null }) {
                             Text(stringResource(R.string.action_cancel))
                         }
                     },
@@ -597,6 +656,7 @@ private fun FolderRow(
     onReorder: () -> Unit,
     onMove: () -> Unit,
     onExplode: () -> Unit,
+    onDelete: () -> Unit,
     subtitle: String? = null,
 ) {
     val accent = if (starred) Cyber.Amber else MaterialTheme.colorScheme.secondary
@@ -690,6 +750,31 @@ private fun FolderRow(
                 onClick = {
                     menuOpen = false
                     onExplode()
+                },
+            )
+            // Destructive, so it sits below a divider and in the error colour: it can
+            // never be mistaken for the folder-level organising actions above it.
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 4.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+            )
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        text = stringResource(R.string.folder_delete),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                },
+                onClick = {
+                    menuOpen = false
+                    onDelete()
                 },
             )
         }

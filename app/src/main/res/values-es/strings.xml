@@ -211,6 +211,16 @@
     <string name="folder_explode_title">Desglosar carpeta</string>
     <string name="folder_explode_confirm">¿Mover todo el contenido de «%1$s» a la carpeta superior y borrar «%1$s» si no queda nada? Los elementos con el mismo nombre se dejan como están.</string>
     <string name="folder_explode_running">Moviendo el contenido fuera de la carpeta…</string>
+    <string name="folder_delete">Eliminar carpeta</string>
+    <string name="folder_delete_title">Eliminar carpeta</string>
+    <string name="folder_delete_confirm">¿Eliminar «%1$s» y todo su contenido del dispositivo? Se borrarán los archivos de audio y no se puede deshacer.</string>
+    <plurals name="folder_delete_songs">
+        <item quantity="one">Se eliminará %d canción.</item>
+        <item quantity="many">Se eliminarán %d canciones.</item>
+        <item quantity="other">Se eliminarán %d canciones.</item>
+    </plurals>
+    <string name="folder_delete_running">Eliminando carpeta…</string>
+    <string name="folder_delete_failed">No se pudo eliminar la carpeta. Puede ser de solo lectura o ya no existir.</string>
     <string name="folder_op_failed">No se pudo completar la acción. Puede que la carpeta sea de solo lectura o que el destino no se pueda escribir.</string>
     <string name="folder_explode_partial">%1$s. %2$s, así que la carpeta se conservó.</string>
     <string name="folder_explode_undeleted">%1$s, pero no se pudo borrar la carpeta.</string>
@@ -227,6 +237,7 @@
     <string name="metadata_instant">Se guarda al instante</string>
     <string name="action_like">Me gusta</string>
     <string name="action_dislike">No me gusta</string>
+    <string name="action_go_to">Ir a</string>
     <string name="action_go_to_folder">Ir a la carpeta</string>
     <string name="action_go_to_album">Ir al álbum</string>
     <string name="action_go_to_artist">Ir al artista</string>

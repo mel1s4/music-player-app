@@ -54,6 +54,7 @@ fun SongRow(
     onClick: () -> Unit,
     onAddToPlaylist: () -> Unit,
     onEdit: (SongEditAction) -> Unit,
+    onGoTo: (SongGoToAction) -> Unit,
     onLike: () -> Unit,
     onDislike: () -> Unit,
     onCompress: (() -> Unit)? = null,
@@ -207,10 +208,12 @@ fun SongRow(
                     )
                 }
                 SongActionMenu(
+                    track = track,
                     expanded = menuOpen,
                     onDismiss = { menuOpen = false },
                     onAddToPlaylist = onAddToPlaylist,
                     onEdit = onEdit,
+                    onGoTo = onGoTo,
                     onLike = onLike,
                     onDislike = onDislike,
                     onCompress = onCompress,

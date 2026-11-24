@@ -220,6 +220,15 @@
     <string name="folder_explode_title">Explode folder</string>
     <string name="folder_explode_confirm">Move everything inside “%1$s” to its parent folder, then delete “%1$s” if nothing is left? Existing items with the same name are left alone.</string>
     <string name="folder_explode_running">Moving contents out of the folder…</string>
+    <string name="folder_delete">Delete folder</string>
+    <string name="folder_delete_title">Delete folder</string>
+    <string name="folder_delete_confirm">Delete “%1$s” and everything inside it from the device? The audio files will be removed and this can\'t be undone.</string>
+    <plurals name="folder_delete_songs">
+        <item quantity="one">%d song will be deleted.</item>
+        <item quantity="other">%d songs will be deleted.</item>
+    </plurals>
+    <string name="folder_delete_running">Deleting folder…</string>
+    <string name="folder_delete_failed">Couldn’t delete that folder. It may be read-only or already gone.</string>
     <string name="folder_op_failed">Couldn’t complete that folder action. It may be read-only, or the destination may not be writable.</string>
     <string name="folder_explode_partial">%1$s. %2$s, so the folder was kept.</string>
     <string name="folder_explode_undeleted">%1$s, but the folder itself couldn’t be deleted.</string>
@@ -234,6 +243,7 @@
     <string name="metadata_instant">Saved immediately</string>
     <string name="action_like">Like</string>
     <string name="action_dislike">Dislike</string>
+    <string name="action_go_to">Go to</string>
     <string name="action_go_to_folder">Go to folder</string>
     <string name="action_go_to_album">Go to album</string>
     <string name="action_go_to_artist">Go to artist</string>

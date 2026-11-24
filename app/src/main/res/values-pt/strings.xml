@@ -211,6 +211,16 @@
     <string name="folder_explode_title">Explodir pasta</string>
     <string name="folder_explode_confirm">Mover todo o conteúdo de “%1$s” para a pasta superior e excluir “%1$s” se não sobrar nada? Itens com o mesmo nome são mantidos.</string>
     <string name="folder_explode_running">Movendo o conteúdo para fora da pasta…</string>
+    <string name="folder_delete">Excluir pasta</string>
+    <string name="folder_delete_title">Excluir pasta</string>
+    <string name="folder_delete_confirm">Excluir “%1$s” e todo o seu conteúdo do dispositivo? Os arquivos de áudio serão apagados e isso não pode ser desfeito.</string>
+    <plurals name="folder_delete_songs">
+        <item quantity="one">%d música será excluída.</item>
+        <item quantity="many">%d músicas serão excluídas.</item>
+        <item quantity="other">%d músicas serão excluídas.</item>
+    </plurals>
+    <string name="folder_delete_running">Excluindo pasta…</string>
+    <string name="folder_delete_failed">Não foi possível excluir a pasta. Ela pode ser somente leitura ou já não existir.</string>
     <string name="folder_op_failed">Não foi possível concluir a ação. A pasta pode ser somente leitura ou o destino pode não permitir gravação.</string>
     <string name="folder_explode_partial">%1$s. %2$s, então a pasta foi mantida.</string>
     <string name="folder_explode_undeleted">%1$s, mas a pasta não pôde ser excluída.</string>
@@ -227,6 +237,7 @@
     <string name="metadata_instant">Salvo na hora</string>
     <string name="action_like">Curtir</string>
     <string name="action_dislike">Não curtir</string>
+    <string name="action_go_to">Ir para</string>
     <string name="action_go_to_folder">Ir para a pasta</string>
     <string name="action_go_to_album">Ir para o álbum</string>
     <string name="action_go_to_artist">Ir para o artista</string>

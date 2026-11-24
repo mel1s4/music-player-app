@@ -30,6 +30,7 @@ enum class FolderOpError {
     CrossLibrary,
     InvalidDestination,
     MoveFailed,
+    DeleteFailed,
 }
 
 data class FolderMoveOutcome(
@@ -43,6 +44,11 @@ data class FolderExplodeOutcome(
     val movedChildren: Int = 0,
     val skipped: Int = 0,
     val failed: Int = 0,
+    val deleted: Boolean = false,
+    val error: FolderOpError? = null,
+)
+
+data class FolderDeleteOutcome(
     val deleted: Boolean = false,
     val error: FolderOpError? = null,
 )
@@ -326,6 +332,44 @@ object FolderReorder {
             failed = failed,
             deleted = deleted,
         )
+    }
+
+    /**
+     * Deletes a folder and everything in it from the device.
+     *
+     * SAF defines `deleteDocument` on a directory as a recursive delete, so this one
+     * call removes the folder, its subfolders and every song inside them. The folder's
+     * URI is derived from a song it contains, just like move and explode: the Files
+     * screen only builds folders from scanned songs, so a folder with no songs is not
+     * addressable from there either.
+     */
+    suspend fun deleteFolder(
+        context: Context,
+        folderPath: String,
+        folderTracks: List<Track>,
+    ): FolderDeleteOutcome = withContext(Dispatchers.IO) {
+        val source = folderPath.trim('/')
+        if (source.isEmpty()) {
+            return@withContext FolderDeleteOutcome(error = FolderOpError.NotFound)
+        }
+        val sourceTrack = folderTracks.firstOrNull()
+            ?: return@withContext FolderDeleteOutcome(error = FolderOpError.NotFound)
+        val sourceUri = folderUriFor(sourceTrack, source)
+            ?: return@withContext FolderDeleteOutcome(error = FolderOpError.NotFound)
+        if (!isDirectory(context, sourceUri)) {
+            return@withContext FolderDeleteOutcome(error = FolderOpError.NotFound)
+        }
+
+        // Deleting is recursive by contract, so there is nothing else to remove here.
+        // A provider may still refuse (read-only tree, missing document), and the
+        // caller turns that refusal into a message instead of a silent no-op.
+        val deleted = runCatching {
+            DocumentsContract.deleteDocument(context.contentResolver, sourceUri)
+        }.getOrDefault(false)
+        if (!deleted) {
+            return@withContext FolderDeleteOutcome(error = FolderOpError.DeleteFailed)
+        }
+        FolderDeleteOutcome(deleted = true)
     }
 
     /**

@@ -25,6 +25,8 @@ import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Compress
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlaylistAdd
@@ -55,6 +57,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.melisa.musicplayer.R
 import dev.melisa.musicplayer.data.Playlist
+import dev.melisa.musicplayer.data.Track
 
 @Composable
 fun AddToPlaylistDialog(
@@ -289,152 +292,201 @@ private fun TagPill(tag: String, selected: Boolean, onClick: () -> Unit) {
 /** The entries under the kebab menu's Edit submenu. */
 enum class SongEditAction { Page, Title, Artist, Album, Tags }
 
+/** The entries under the kebab menu's Go to submenu. */
+enum class SongGoToAction { Artist, Album, Folder }
+
+/** Which page of the song kebab menu is showing. */
+private enum class KebabPage { Main, Edit, GoTo }
+
 @Composable
 fun SongActionMenu(
+    track: Track,
     expanded: Boolean,
     onDismiss: () -> Unit,
     onAddToPlaylist: () -> Unit,
     onEdit: (SongEditAction) -> Unit,
+    onGoTo: (SongGoToAction) -> Unit,
     onLike: () -> Unit,
     onDislike: () -> Unit,
     onCompress: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
     onStartBulkSelection: (() -> Unit)? = null,
 ) {
-    // The menu has two pages: the per-song actions and the Edit submenu. Keying the
-    // state on [expanded] means every reopen starts on the first page.
-    var editPage by remember(expanded) { mutableStateOf(false) }
+    // The menu has three pages: the per-song actions and the Edit and Go to submenus.
+    // Keying the state on [expanded] means every reopen starts on the first page.
+    var page by remember(expanded) { mutableStateOf(KebabPage.Main) }
 
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
-        if (editPage) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_edit)) },
-                leadingIcon = {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                },
-                onClick = { editPage = false },
-            )
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 4.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-            )
-            EditMenuItem(R.string.action_edit_page, Icons.Filled.Edit) {
-                onDismiss()
-                onEdit(SongEditAction.Page)
+        when (page) {
+            KebabPage.Edit -> {
+                SubmenuHeader(R.string.action_edit) { page = KebabPage.Main }
+                SubmenuItem(R.string.action_edit_page, Icons.Filled.Edit) {
+                    onDismiss()
+                    onEdit(SongEditAction.Page)
+                }
+                SubmenuItem(R.string.action_change_title, Icons.Filled.Title) {
+                    onDismiss()
+                    onEdit(SongEditAction.Title)
+                }
+                SubmenuItem(R.string.bulk_set_artist, Icons.Filled.Person) {
+                    onDismiss()
+                    onEdit(SongEditAction.Artist)
+                }
+                SubmenuItem(R.string.bulk_set_album, Icons.Filled.Album) {
+                    onDismiss()
+                    onEdit(SongEditAction.Album)
+                }
+                SubmenuItem(R.string.action_edit_tags, Icons.Filled.Label) {
+                    onDismiss()
+                    onEdit(SongEditAction.Tags)
+                }
             }
-            EditMenuItem(R.string.action_change_title, Icons.Filled.Title) {
-                onDismiss()
-                onEdit(SongEditAction.Title)
-            }
-            EditMenuItem(R.string.bulk_set_artist, Icons.Filled.Person) {
-                onDismiss()
-                onEdit(SongEditAction.Artist)
-            }
-            EditMenuItem(R.string.bulk_set_album, Icons.Filled.Album) {
-                onDismiss()
-                onEdit(SongEditAction.Album)
-            }
-            EditMenuItem(R.string.action_edit_tags, Icons.Filled.Label) {
-                onDismiss()
-                onEdit(SongEditAction.Tags)
-            }
-        } else {
-            // Selection mode is a mode, not an edit of this song, so it opens the menu
-            // above the per-song actions and carries its own divider.
-            if (onStartBulkSelection != null) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.bulk_start)) },
-                    leadingIcon = { Icon(Icons.Filled.Checklist, contentDescription = null) },
-                    onClick = {
+
+            KebabPage.GoTo -> {
+                SubmenuHeader(R.string.action_go_to) { page = KebabPage.Main }
+                // A blank artist or album has no page to open, so the entry is hidden
+                // rather than opening an empty collection. The folder always exists.
+                if (!track.artist.isNullOrBlank()) {
+                    SubmenuItem(R.string.field_artist, Icons.Filled.Person) {
                         onDismiss()
-                        onStartBulkSelection()
-                    },
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 4.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                )
+                        onGoTo(SongGoToAction.Artist)
+                    }
+                }
+                if (!track.album.isNullOrBlank()) {
+                    SubmenuItem(R.string.field_album, Icons.Filled.Album) {
+                        onDismiss()
+                        onGoTo(SongGoToAction.Album)
+                    }
+                }
+                SubmenuItem(R.string.field_folder, Icons.Filled.Folder) {
+                    onDismiss()
+                    onGoTo(SongGoToAction.Folder)
+                }
             }
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_like)) },
-                leadingIcon = { Icon(Icons.Filled.ThumbUp, contentDescription = null) },
-                onClick = {
-                    onDismiss()
-                    onLike()
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_dislike)) },
-                leadingIcon = { Icon(Icons.Filled.ThumbDown, contentDescription = null) },
-                onClick = {
-                    onDismiss()
-                    onDislike()
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_add_to_playlist)) },
-                leadingIcon = { Icon(Icons.Filled.PlaylistAdd, contentDescription = null) },
-                onClick = {
-                    onDismiss()
-                    onAddToPlaylist()
-                },
-            )
-            // The arrow marks Edit as a second page instead of a terminal action; the
-            // submenu holds the four ways of editing that song.
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_edit)) },
-                leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
-                trailingIcon = {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = null,
+
+            KebabPage.Main -> {
+                // Selection mode is a mode, not an edit of this song, so it opens the menu
+                // above the per-song actions and carries its own divider.
+                if (onStartBulkSelection != null) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.bulk_start)) },
+                        leadingIcon = { Icon(Icons.Filled.Checklist, contentDescription = null) },
+                        onClick = {
+                            onDismiss()
+                            onStartBulkSelection()
+                        },
                     )
-                },
-                onClick = { editPage = true },
-            )
-            if (onCompress != null) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                    )
+                }
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.action_compress)) },
-                    leadingIcon = { Icon(Icons.Filled.Compress, contentDescription = null) },
+                    text = { Text(stringResource(R.string.action_like)) },
+                    leadingIcon = { Icon(Icons.Filled.ThumbUp, contentDescription = null) },
                     onClick = {
                         onDismiss()
-                        onCompress()
+                        onLike()
                     },
-                )
-            }
-            // Destructive actions sit at the bottom, separated and in the error colour,
-            // so they can never be confused with "edit" or "add to playlist".
-            if (onDelete != null) {
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 4.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
                 )
                 DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = stringResource(R.string.action_delete_file),
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Filled.Delete,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
-                        )
-                    },
+                    text = { Text(stringResource(R.string.action_dislike)) },
+                    leadingIcon = { Icon(Icons.Filled.ThumbDown, contentDescription = null) },
                     onClick = {
                         onDismiss()
-                        onDelete()
+                        onDislike()
                     },
                 )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_add_to_playlist)) },
+                    leadingIcon = { Icon(Icons.Filled.PlaylistAdd, contentDescription = null) },
+                    onClick = {
+                        onDismiss()
+                        onAddToPlaylist()
+                    },
+                )
+                // The arrow marks Edit and Go to as second pages instead of terminal
+                // actions; each submenu holds one way of working with the song.
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_edit)) },
+                    leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
+                    trailingIcon = { SubmenuChevron() },
+                    onClick = { page = KebabPage.Edit },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_go_to)) },
+                    leadingIcon = { Icon(Icons.Filled.Explore, contentDescription = null) },
+                    trailingIcon = { SubmenuChevron() },
+                    onClick = { page = KebabPage.GoTo },
+                )
+                if (onCompress != null) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_compress)) },
+                        leadingIcon = { Icon(Icons.Filled.Compress, contentDescription = null) },
+                        onClick = {
+                            onDismiss()
+                            onCompress()
+                        },
+                    )
+                }
+                // Destructive actions sit at the bottom, separated and in the error colour,
+                // so they can never be confused with "edit" or "add to playlist".
+                if (onDelete != null) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = stringResource(R.string.action_delete_file),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Filled.Delete,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                            )
+                        },
+                        onClick = {
+                            onDismiss()
+                            onDelete()
+                        },
+                    )
+                }
             }
         }
     }
 }
 
+/** A submenu's title row doubles as its Back target to the first page. */
 @Composable
-private fun EditMenuItem(labelRes: Int, icon: ImageVector, onClick: () -> Unit) {
+private fun SubmenuHeader(labelRes: Int, onBack: () -> Unit) {
+    DropdownMenuItem(
+        text = { Text(stringResource(labelRes)) },
+        leadingIcon = {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+        },
+        onClick = onBack,
+    )
+    HorizontalDivider(
+        modifier = Modifier.padding(vertical = 4.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+    )
+}
+
+@Composable
+private fun SubmenuChevron() {
+    Icon(
+        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+        contentDescription = null,
+    )
+}
+
+@Composable
+private fun SubmenuItem(labelRes: Int, icon: ImageVector, onClick: () -> Unit) {
     DropdownMenuItem(
         text = { Text(stringResource(labelRes)) },
         leadingIcon = { Icon(icon, contentDescription = null) },

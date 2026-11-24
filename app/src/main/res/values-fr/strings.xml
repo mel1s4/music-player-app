@@ -211,6 +211,16 @@
     <string name="folder_explode_title">Éclater le dossier</string>
     <string name="folder_explode_confirm">Déplacer tout le contenu de « %1$s » vers le dossier parent, puis supprimer « %1$s » s’il ne reste rien ? Les éléments portant le même nom sont laissés en place.</string>
     <string name="folder_explode_running">Déplacement du contenu hors du dossier…</string>
+    <string name="folder_delete">Supprimer le dossier</string>
+    <string name="folder_delete_title">Supprimer le dossier</string>
+    <string name="folder_delete_confirm">Supprimer « %1$s » et tout son contenu de l\'appareil ? Les fichiers audio seront effacés et cette action est irréversible.</string>
+    <plurals name="folder_delete_songs">
+        <item quantity="one">%d morceau sera supprimé.</item>
+        <item quantity="many">%d morceaux seront supprimés.</item>
+        <item quantity="other">%d morceaux seront supprimés.</item>
+    </plurals>
+    <string name="folder_delete_running">Suppression du dossier…</string>
+    <string name="folder_delete_failed">Impossible de supprimer ce dossier. Il est peut-être en lecture seule ou déjà absent.</string>
     <string name="folder_op_failed">Impossible de terminer cette action. Le dossier est peut-être en lecture seule ou la destination n’est pas accessible en écriture.</string>
     <string name="folder_explode_partial">%1$s. %2$s ; le dossier a donc été conservé.</string>
     <string name="folder_explode_undeleted">%1$s, mais le dossier n’a pas pu être supprimé.</string>
@@ -227,6 +237,7 @@
     <string name="metadata_instant">Enregistré immédiatement</string>
     <string name="action_like">J\'aime</string>
     <string name="action_dislike">Je n\'aime pas</string>
+    <string name="action_go_to">Aller à</string>
     <string name="action_go_to_folder">Aller au dossier</string>
     <string name="action_go_to_album">Aller à l\'album</string>
     <string name="action_go_to_artist">Aller à l\'artiste</string>

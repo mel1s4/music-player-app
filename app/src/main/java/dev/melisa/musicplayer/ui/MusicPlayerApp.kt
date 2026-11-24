@@ -154,6 +154,7 @@ import dev.melisa.musicplayer.ui.components.SectionKicker
 import dev.melisa.musicplayer.ui.components.rememberSongSelectionState
 import dev.melisa.musicplayer.ui.components.SongCover
 import dev.melisa.musicplayer.ui.components.SongEditAction
+import dev.melisa.musicplayer.ui.components.SongGoToAction
 import dev.melisa.musicplayer.ui.screens.ArtistScreen
 import dev.melisa.musicplayer.ui.screens.CollectionEntry
 import dev.melisa.musicplayer.ui.screens.CollectionScreen
@@ -1141,6 +1142,59 @@ fun MusicPlayerApp(settings: AppSettings) {
     }
 
     /**
+     * The kebab menu's Go to submenu. Artist and album open their collection page over
+     * the current tab, exactly like a search result; a blank tag would open a page with
+     * nothing on it, so the menu hides that entry before it can be picked. Folder jumps
+     * to Files at the song's own folder, closing any open collection page first.
+     */
+    fun goToSong(track: Track, action: SongGoToAction) {
+        when (action) {
+            SongGoToAction.Artist -> {
+                val artist = track.artist?.takeIf { it.isNotBlank() } ?: return
+                dismissSearchImmediately()
+                showArtist(artist)
+            }
+
+            SongGoToAction.Album -> {
+                val album = track.album?.takeIf { it.isNotBlank() } ?: return
+                dismissSearchImmediately()
+                showAlbum(album)
+            }
+
+            SongGoToAction.Folder -> {
+                filesPath = track.folder.trimStart('/')
+                navigate(Destination.Files)
+            }
+        }
+    }
+
+    /**
+     * Drops every trace of a track the device no longer has: ratings, tags, favourites,
+     * playlist entries, the editor target, its slot in the queue and the now-playing
+     * card. A file that is gone must never be reopened by the player.
+     */
+    fun forgetDeletedTrack(track: Track) {
+        extras.forget(track.uri.toString())
+        if (editingTrack?.uri == track.uri) editingTrack = null
+
+        val player = controller
+        val index = player?.let { p ->
+            (0 until p.mediaItemCount).firstOrNull { i ->
+                p.getMediaItemAt(i).mediaId == track.uri.toString()
+            }
+        }
+        if (player != null && index != null) {
+            player.removeMediaItem(index)
+            if (player.mediaItemCount == 0) {
+                player.stop()
+                nowPlaying = null
+            }
+        } else if (nowPlaying?.uri == track.uri) {
+            nowPlaying = null
+        }
+    }
+
+    /**
      * Deletes a file only after the confirmation dialog accepted. Ratings, tags,
      * favourites and playlist entries go with it; if it was queued, the queue drops
      * that item so the player can never try to reopen a file that no longer exists.
@@ -1151,24 +1205,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                 deleteFailed = true
                 return@launch
             }
-            extras.forget(track.uri.toString())
-            if (editingTrack?.uri == track.uri) editingTrack = null
-
-            val player = controller
-            val index = player?.let { p ->
-                (0 until p.mediaItemCount).firstOrNull { i ->
-                    p.getMediaItemAt(i).mediaId == track.uri.toString()
-                }
-            }
-            if (player != null && index != null) {
-                player.removeMediaItem(index)
-                if (player.mediaItemCount == 0) {
-                    player.stop()
-                    nowPlaying = null
-                }
-            } else if (nowPlaying?.uri == track.uri) {
-                nowPlaying = null
-            }
+            forgetDeletedTrack(track)
             refreshToken++
         }
     }
@@ -1182,24 +1219,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                     failed++
                     return@forEach
                 }
-                extras.forget(track.uri.toString())
-                if (editingTrack?.uri == track.uri) editingTrack = null
-
-                val player = controller
-                val index = player?.let { p ->
-                    (0 until p.mediaItemCount).firstOrNull { i ->
-                        p.getMediaItemAt(i).mediaId == track.uri.toString()
-                    }
-                }
-                if (player != null && index != null) {
-                    player.removeMediaItem(index)
-                    if (player.mediaItemCount == 0) {
-                        player.stop()
-                        nowPlaying = null
-                    }
-                } else if (nowPlaying?.uri == track.uri) {
-                    nowPlaying = null
-                }
+                forgetDeletedTrack(track)
             }
             refreshToken++
             if (failed > 0) {
@@ -1208,6 +1228,38 @@ fun MusicPlayerApp(settings: AppSettings) {
                     failed,
                     failed,
                 )
+            }
+        }
+    }
+
+    /**
+     * Deletes a folder and everything in it from the device. SAF deletes directories
+     * recursively, so once the call succeeds the songs are gone; their queue slots,
+     * ratings and the pins on the folder are dropped here instead of being left to
+     * point at URIs that can never resolve again.
+     */
+    fun startFolderDelete(folderPath: String, folderTracks: List<Track>) {
+        if (folderOpKind != null || folderTracks.isEmpty()) return
+        folderOpKind = FolderOpKind.Delete
+        folderOpMessage = null
+        folderOpScope.launch {
+            try {
+                val outcome = FolderReorder.deleteFolder(
+                    context = context,
+                    folderPath = folderPath,
+                    folderTracks = folderTracks,
+                )
+                if (outcome.error != null) {
+                    folderOpMessage = context.getString(R.string.folder_delete_failed)
+                } else {
+                    folderTracks.forEach { track -> forgetDeletedTrack(track) }
+                    extras.forgetFolder(folderPath)
+                    refreshToken++
+                }
+            } catch (_: Exception) {
+                folderOpMessage = context.getString(R.string.folder_delete_failed)
+            } finally {
+                folderOpKind = null
             }
         }
     }
@@ -1422,6 +1474,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                             onShuffleAll = { shuffleEverything() },
                             onAddToPlaylist = { openAddToPlaylist(it) },
                             onEditSong = { track, action -> editSong(track, action) },
+                            onGoToSong = { track, action -> goToSong(track, action) },
                             onCompress = { openCompress(listOf(it)) },
                             onLike = { extras.like(it.uri.toString()) },
                             onDislike = { dislike(it) },
@@ -1448,9 +1501,13 @@ fun MusicPlayerApp(settings: AppSettings) {
                             onExplodeFolder = { path, folderTracks ->
                                 startFolderExplode(path, folderTracks)
                             },
+                            onDeleteFolder = { path, folderTracks ->
+                                startFolderDelete(path, folderTracks)
+                            },
                             onPlay = { track, queue -> play(track, queue) },
                             onAddToPlaylist = { openAddToPlaylist(it) },
                             onEditSong = { track, action -> editSong(track, action) },
+                            onGoToSong = { track, action -> goToSong(track, action) },
                             onCompress = { openCompress(listOf(it)) },
                             onLike = { extras.like(it.uri.toString()) },
                             onDislike = { dislike(it) },
@@ -1517,6 +1574,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                         onPlayAll = { queue, shuffle -> if (queue.isNotEmpty()) play(queue.first(), queue, shuffle) },
                         onAddToPlaylist = { openAddToPlaylist(it) },
                         onEditSong = { track, action -> editSong(track, action) },
+                        onGoToSong = { track, action -> goToSong(track, action) },
                         onCompress = { openCompress(listOf(it)) },
                         onLike = { extras.like(it.uri.toString()) },
                         onDislike = { dislike(it) },
@@ -1548,6 +1606,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                         onPlayAll = { queue, shuffle -> if (queue.isNotEmpty()) play(queue.first(), queue, shuffle) },
                         onAddToPlaylist = { openAddToPlaylist(it) },
                         onEditSong = { track, action -> editSong(track, action) },
+                        onGoToSong = { track, action -> goToSong(track, action) },
                         onCompress = { openCompress(listOf(it)) },
                         onLike = { extras.like(it.uri.toString()) },
                         onDislike = { dislike(it) },
@@ -1581,6 +1640,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                             onPlay = { track, queue -> play(track, queue) },
                             onAddToPlaylist = { openAddToPlaylist(it) },
                             onEditSong = { track, action -> editSong(track, action) },
+                            onGoToSong = { track, action -> goToSong(track, action) },
                             onCompress = { openCompress(listOf(it)) },
                             onLike = { extras.like(it.uri.toString()) },
                             onDislike = { dislike(it) },
@@ -1861,10 +1921,10 @@ fun MusicPlayerApp(settings: AppSettings) {
                 title = {
                     Text(
                         stringResource(
-                            if (runningFolderOp == FolderOpKind.Move) {
-                                R.string.folder_move
-                            } else {
-                                R.string.folder_explode
+                            when (runningFolderOp) {
+                                FolderOpKind.Move -> R.string.folder_move
+                                FolderOpKind.Explode -> R.string.folder_explode
+                                FolderOpKind.Delete -> R.string.folder_delete
                             },
                         ),
                     )
@@ -1878,10 +1938,10 @@ fun MusicPlayerApp(settings: AppSettings) {
                         Spacer(Modifier.width(12.dp))
                         Text(
                             stringResource(
-                                if (runningFolderOp == FolderOpKind.Move) {
-                                    R.string.folder_move_running
-                                } else {
-                                    R.string.folder_explode_running
+                                when (runningFolderOp) {
+                                    FolderOpKind.Move -> R.string.folder_move_running
+                                    FolderOpKind.Explode -> R.string.folder_explode_running
+                                    FolderOpKind.Delete -> R.string.folder_delete_running
                                 },
                             ),
                         )
@@ -2799,4 +2859,4 @@ private fun Track.toMediaItem(target: Uri = uri): MediaItem {
         .build()
 }
 
-private enum class FolderOpKind { Move, Explode }
+private enum class FolderOpKind { Move, Explode, Delete }

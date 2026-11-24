@@ -14,6 +14,22 @@ project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - More library statistics, and a listening-history screen built on the recorded play
   timestamps.
 
+## [0.7.1] - 2026-11-24
+
+### Added
+
+- **Go to** in a song's kebab menu: a submenu that opens the song's **Artist** page, its
+  **Album** page, or its **Folder** in Files. A song without an artist or album tag
+  hides the matching destination instead of opening an empty page.
+- **Delete** in every folder's kebab menu on Files. A confirmation shows how many songs
+  disappear, and the songs' ratings, tags, playlist entries, pins and queue slots are
+  dropped along with the files.
+
+### Fixed
+
+- Library scans skip hidden files and folders (names starting with a dot), so a
+  Syncthing `.stversions` mirror no longer imports every song a second time.
+
 ## [0.7.0] - 2026-11-24
 
 ### Added
@@ -241,7 +257,9 @@ The first public release.
   snapshot.
 - A failed scan no longer leaves the list stuck in a permanent scanning state.
 
-[Unreleased]: https://github.com/mel1s4/music-player-app/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/mel1s4/music-player-app/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/mel1s4/music-player-app/compare/v0.7.0...v0.7.1
+[0.7.0]: https://github.com/mel1s4/music-player-app/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/mel1s4/music-player-app/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/mel1s4/music-player-app/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/mel1s4/music-player-app/compare/v0.4.0...v0.5.0

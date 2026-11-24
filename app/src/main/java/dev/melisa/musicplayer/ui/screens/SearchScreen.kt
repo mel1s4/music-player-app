@@ -65,6 +65,7 @@ import dev.melisa.musicplayer.ui.components.MessageState
 import dev.melisa.musicplayer.ui.components.ScanningState
 import dev.melisa.musicplayer.ui.components.SectionKicker
 import dev.melisa.musicplayer.ui.components.SongEditAction
+import dev.melisa.musicplayer.ui.components.SongGoToAction
 import dev.melisa.musicplayer.ui.components.SongRow
 import dev.melisa.musicplayer.ui.theme.Cyber
 import dev.melisa.musicplayer.ui.theme.cyberClick
@@ -92,6 +93,7 @@ fun SearchScreen(
     onPlay: (Track, List<Track>) -> Unit,
     onAddToPlaylist: (Track) -> Unit,
     onEditSong: (Track, SongEditAction) -> Unit,
+    onGoToSong: (Track, SongGoToAction) -> Unit,
     onCompress: (Track) -> Unit,
     onLike: (Track) -> Unit,
     onDislike: (Track) -> Unit,
@@ -219,6 +221,7 @@ fun SearchScreen(
                     onPlay = onPlay,
                     onAddToPlaylist = onAddToPlaylist,
                     onEditSong = onEditSong,
+                    onGoToSong = onGoToSong,
                     onCompress = onCompress,
                     onLike = onLike,
                     onDislike = onDislike,
@@ -255,6 +258,7 @@ private fun Results(
     onPlay: (Track, List<Track>) -> Unit,
     onAddToPlaylist: (Track) -> Unit,
     onEditSong: (Track, SongEditAction) -> Unit,
+    onGoToSong: (Track, SongGoToAction) -> Unit,
     onCompress: (Track) -> Unit,
     onLike: (Track) -> Unit,
     onDislike: (Track) -> Unit,
@@ -370,6 +374,7 @@ private fun Results(
                     onClick = { onPlay(track, songHits) },
                     onAddToPlaylist = { onAddToPlaylist(track) },
                     onEdit = { action -> onEditSong(track, action) },
+                    onGoTo = { action -> onGoToSong(track, action) },
                     onCompress = { onCompress(track) },
                     onLike = { onLike(track) },
                     onDislike = { onDislike(track) },

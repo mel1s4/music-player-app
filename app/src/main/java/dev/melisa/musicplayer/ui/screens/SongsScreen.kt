@@ -55,6 +55,7 @@ import dev.melisa.musicplayer.ui.components.MessageState
 import dev.melisa.musicplayer.ui.components.ScanningState
 import dev.melisa.musicplayer.ui.components.SectionKicker
 import dev.melisa.musicplayer.ui.components.SongEditAction
+import dev.melisa.musicplayer.ui.components.SongGoToAction
 import dev.melisa.musicplayer.ui.components.SongRow
 import dev.melisa.musicplayer.ui.components.TrackSort
 import dev.melisa.musicplayer.ui.components.TrackSortButton
@@ -78,6 +79,7 @@ fun SongsScreen(
     onShuffleAll: () -> Unit,
     onAddToPlaylist: (Track) -> Unit,
     onEditSong: (Track, SongEditAction) -> Unit,
+    onGoToSong: (Track, SongGoToAction) -> Unit,
     onCompress: (Track) -> Unit,
     onLike: (Track) -> Unit,
     onDislike: (Track) -> Unit,
@@ -213,6 +215,7 @@ fun SongsScreen(
                             onClick = { onPlay(track, displayOrder) },
                             onAddToPlaylist = { onAddToPlaylist(track) },
                             onEdit = { action -> onEditSong(track, action) },
+                            onGoTo = { action -> onGoToSong(track, action) },
                             onCompress = { onCompress(track) },
                             onLike = { onLike(track) },
                             onDislike = { onDislike(track) },
@@ -233,6 +236,7 @@ fun SongsScreen(
                                 onClick = { onPlay(track, displayOrder) },
                                 onAddToPlaylist = { onAddToPlaylist(track) },
                                 onEdit = { action -> onEditSong(track, action) },
+                                onGoTo = { action -> onGoToSong(track, action) },
                                 onCompress = { onCompress(track) },
                                 onLike = { onLike(track) },
                                 onDislike = { onDislike(track) },

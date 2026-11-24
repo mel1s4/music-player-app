@@ -21,7 +21,7 @@ account, no upload, no network permission.
 - **Android 8.0 (API 26) or newer.**
 - The release page includes a **SHA-256 checksum**; verify it before installing.
 - GitHub Releases is the official distribution channel; the latest version is
-  [v0.7.0](https://github.com/mel1s4/music-player-app/releases/tag/v0.7.0).
+  [v0.7.1](https://github.com/mel1s4/music-player-app/releases/tag/v0.7.1).
 - Prefer to build it yourself? See [Build and run](#build-and-run).
 - Already have a debug/test build installed? Uninstall it first — Android will not
   update across different signing keys.
@@ -53,6 +53,8 @@ notes, palette, contrast measurements and motion inventory are in
   button shows a spinner and disables itself during the refresh; your library stays usable.
 - **Incremental scanning** — file metadata is cached by URI, size and modification time,
   so only new or edited files are reopened. Deleted files are pruned from the cache.
+- **Hidden entries skipped** — files and folders whose name starts with a dot, such as
+  Syncthing's `.stversions`, are never scanned, so mirrored copies do not appear twice.
 - **Songs view** with date added / title / artist / duration sorting (date added is the
   default), an alphabet rail, and a count badge.
 - **Albums and artists** collected from track tags, with cover art and per-collection
@@ -66,11 +68,12 @@ notes, palette, contrast measurements and motion inventory are in
   artist, duration) and the alphabetical letter rail for the two alphabetical orders.
 - **Files browser** with a scrollable breadcrumb, per-folder song counts, and
   **starred folders** pinned at the root for quick access. Every folder has a kebab
-  menu with **Reorder contents**, **Move**, and **Explode**. Reorder files its songs
-  under `artist/album/` at the root of the containing Music Library (songs without an
-  artist are left where they are); Move places the folder inside another folder of the
-  same library; Explode moves its contents to the parent and deletes the folder if
-  nothing is left.
+  menu with **Reorder contents**, **Move**, **Explode**, and **Delete**. Reorder files
+  its songs under `artist/album/` at the root of the containing Music Library (songs
+  without an artist are left where they are); Move places the folder inside another
+  folder of the same library; Explode moves its contents to the parent and deletes the
+  folder if nothing is left; Delete removes the folder and everything inside it from
+  the device after a confirmation that counts the songs.
 - **Search** across tracks, albums and artists, with recent queries. A deliberate pull
   down from the top first shows a progress cue, then reveals Search after a preview
   threshold; releasing commits. The top-bar magnifier opens it directly.
@@ -79,7 +82,8 @@ notes, palette, contrast measurements and motion inventory are in
   confirmation.
 - **Quick edits** from that same kebab menu: its **Edit** submenu opens the full editor,
   changes the title, sets the artist or album with the editor's autocomplete, or toggles
-  tags as checked pills without leaving the list.
+  tags as checked pills without leaving the list. Its **Go to** submenu jumps to the
+  song's **Artist** page, its **Album** page, or its **Folder** in Files.
 
 ### Playback
 

@@ -41,6 +41,7 @@ import dev.melisa.musicplayer.data.Track
 import dev.melisa.musicplayer.data.songFileInfo
 import dev.melisa.musicplayer.ui.components.SectionKicker
 import dev.melisa.musicplayer.ui.components.SongEditAction
+import dev.melisa.musicplayer.ui.components.SongGoToAction
 import dev.melisa.musicplayer.ui.components.SongRow
 
 /** One album inside an artist page. [year] is null when no track carries a usable year. */
@@ -71,6 +72,7 @@ fun ArtistScreen(
     onPlayAll: (List<Track>, Boolean) -> Unit,
     onAddToPlaylist: (Track) -> Unit,
     onEditSong: (Track, SongEditAction) -> Unit,
+    onGoToSong: (Track, SongGoToAction) -> Unit,
     onCompress: (Track) -> Unit,
     onLike: (Track) -> Unit,
     onDislike: (Track) -> Unit,
@@ -226,6 +228,7 @@ fun ArtistScreen(
                             onClick = { onPlay(track, section.tracks) },
                             onAddToPlaylist = { onAddToPlaylist(track) },
                             onEdit = { action -> onEditSong(track, action) },
+                            onGoTo = { action -> onGoToSong(track, action) },
                             onCompress = { onCompress(track) },
                             onLike = { onLike(track) },
                             onDislike = { onDislike(track) },

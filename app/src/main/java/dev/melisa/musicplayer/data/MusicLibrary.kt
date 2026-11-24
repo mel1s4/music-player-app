@@ -38,6 +38,16 @@ private val ID3_EXTENSIONS = setOf("mp3", "wav", "aif", "aiff", "ape", "wv")
 
 private const val MAX_PARALLEL_PARSES = 4
 
+/**
+ * A dot at the start of a name is the convention for a hidden entry on Android.
+ *
+ * Syncthing keeps its version history in `.stversions`, which mirrors the library and
+ * would otherwise import every song a second time; `.nomedia`, macOS `._*` sidecars and
+ * `.trashed-*` files are equally unwanted. The granted library root itself is never
+ * checked: picking a dot folder as the library is an explicit request to scan it.
+ */
+private fun isHiddenName(name: String): Boolean = name.startsWith(".")
+
 private const val TAG = "MusicLibrary"
 
 /**
@@ -162,14 +172,17 @@ object MusicLibrary {
             while (c.moveToNext()) {
                 coroutineContext.ensureActive()
                 val documentId = c.getString(idIndex) ?: continue
+                val name = (if (nameIndex >= 0) c.getString(nameIndex) else null)
+                    ?: documentId.substringAfterLast('/')
+                // Hidden directories are skipped before recursing, so a mirror tree
+                // such as `.stversions` costs no further queries at all.
+                if (isHiddenName(name)) continue
                 val mime = if (mimeIndex >= 0) c.getString(mimeIndex) else null
                 if (mime == Document.MIME_TYPE_DIR) {
                     walkTree(context, tree, documentId, out)
                     continue
                 }
 
-                val name = (if (nameIndex >= 0) c.getString(nameIndex) else null)
-                    ?: documentId.substringAfterLast('/')
                 val extension = name.substringAfterLast('.', "").lowercase()
                 if (extension !in AUDIO_EXTENSIONS) continue
                 if (mime != null && mime.startsWith("image/")) continue
@@ -197,10 +210,11 @@ object MusicLibrary {
         val children = runCatching { dir.listFiles() }.getOrDefault(emptyArray())
         children.forEach { child ->
             coroutineContext.ensureActive()
+            val name = child.name ?: return@forEach
+            if (isHiddenName(name)) return@forEach
             if (child.isDirectory) {
                 collectDocumentFile(context, child, out)
             } else {
-                val name = child.name ?: return@forEach
                 val extension = name.substringAfterLast('.', "").lowercase()
                 if (extension !in AUDIO_EXTENSIONS) return@forEach
                 out += FileEntry(
