@@ -29,10 +29,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Hearing
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Edit
@@ -42,6 +44,8 @@ import androidx.compose.material.icons.filled.ThumbDown
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -58,8 +62,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -914,7 +916,7 @@ private fun PlaylistTrackRow(
     val selecting = selection?.active == true
     val bulkSelected = selection?.isSelected(track.uri.toString()) == true
     val highlighted = selected || bulkSelected
-    val haptics = LocalHapticFeedback.current
+    var menuOpen by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier
@@ -963,12 +965,6 @@ private fun PlaylistTrackRow(
                 .cyberClick(
                     onClick = {
                         if (selecting) selection?.toggle(track) else onClick()
-                    },
-                    onLongClick = {
-                        if (selection != null) {
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            if (selecting) selection.toggle(track) else selection.start(track)
-                        }
                     },
                 ),
             verticalAlignment = Alignment.CenterVertically,
@@ -1023,6 +1019,27 @@ private fun PlaylistTrackRow(
                 }
             } else {
                 Spacer(Modifier.width(12.dp))
+            }
+            // Playlist rows have no per-song edit menu, so the kebab exists only to
+            // start selection mode with this track.
+            Box {
+                IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(44.dp)) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = stringResource(R.string.action_more),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.bulk_start)) },
+                        leadingIcon = { Icon(Icons.Filled.Checklist, contentDescription = null) },
+                        onClick = {
+                            menuOpen = false
+                            selection?.start(track)
+                        },
+                    )
+                }
             }
         }
         }

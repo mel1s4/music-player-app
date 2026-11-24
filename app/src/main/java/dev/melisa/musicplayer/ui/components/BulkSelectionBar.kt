@@ -35,7 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.melisa.musicplayer.R
 
-/** Persistent toolbar shown while one or more tracks are selected by long-press. */
+/** Persistent toolbar shown while one or more tracks are selected from a row menu. */
 @Composable
 fun BulkSelectionBar(
     count: Int,

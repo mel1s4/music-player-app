@@ -9,10 +9,11 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import dev.melisa.musicplayer.data.Track
 
 /**
- * The selected tracks for a long-press bulk action.
+ * The selected tracks for a bulk action.
  *
  * A map keeps insertion order for the "N selected" count and makes toggling by URI
- * cheap. [start] is used by the first long-press; later taps only toggle.
+ * cheap. [start] is used by the kebab menu's "Bulk selection" item, seeded with the
+ * song whose menu was opened; later taps only toggle.
  */
 class SongSelectionState {
     var selected by mutableStateOf<Map<String, Track>>(emptyMap())
@@ -45,8 +46,9 @@ class SongSelectionState {
 fun rememberSongSelectionState(): SongSelectionState = remember { SongSelectionState() }
 
 /**
- * Every track row reads this. The host provides it around the whole screen tree so a
- * long-press in Songs, Search, Files, an album page or a playlist all means the same
- * thing without each screen passing selection lambdas down.
+ * Every track row reads this. The host provides it around the whole screen tree so
+ * "Bulk selection" in a row menu means the same thing in Songs, Search, Files, an
+ * album page, an artist page or a playlist without each screen passing selection
+ * lambdas down.
  */
 val LocalSongSelection = staticCompositionLocalOf<SongSelectionState?> { null }

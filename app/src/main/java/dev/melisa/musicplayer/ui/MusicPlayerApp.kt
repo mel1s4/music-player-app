@@ -153,6 +153,7 @@ import dev.melisa.musicplayer.ui.components.ReorderUiState
 import dev.melisa.musicplayer.ui.components.SectionKicker
 import dev.melisa.musicplayer.ui.components.rememberSongSelectionState
 import dev.melisa.musicplayer.ui.components.SongCover
+import dev.melisa.musicplayer.ui.components.SongEditAction
 import dev.melisa.musicplayer.ui.screens.ArtistScreen
 import dev.melisa.musicplayer.ui.screens.CollectionEntry
 import dev.melisa.musicplayer.ui.screens.CollectionScreen
@@ -263,7 +264,7 @@ fun MusicPlayerApp(settings: AppSettings) {
         try {
             val scanned = MusicLibrary.scan(context, settings.libraries, extras.trackMetaCache)
             tracks = scanned
-            // First-seen stamps power the "Recently added" section on the dashboard.
+            // First-seen stamps order Songs by date added.
             extras.registerAdded(scanned.map { it.uri.toString() to it.lastModifiedMs })
             nowPlaying = nowPlaying?.let { old ->
                 scanned.firstOrNull { it.uri == old.uri } ?: old
@@ -444,8 +445,9 @@ fun MusicPlayerApp(settings: AppSettings) {
     var showTagEditor by remember { mutableStateOf(false) }
     var showNewPlaylist by remember { mutableStateOf(false) }
 
-    // Long-press selection shared by every SongRow/track row in the app.
+    // Bulk selection shared by every SongRow/track row in the app.
     val songSelection = rememberSongSelectionState()
+    var bulkTitleTarget by remember { mutableStateOf<List<Track>?>(null) }
     var bulkArtistTarget by remember { mutableStateOf<List<Track>?>(null) }
     var bulkAlbumTarget by remember { mutableStateOf<List<Track>?>(null) }
     var bulkTagsTarget by remember { mutableStateOf<List<Track>?>(null) }
@@ -718,13 +720,18 @@ fun MusicPlayerApp(settings: AppSettings) {
     }
 
     /**
-     * Applies one artist or album value to a batch, preserving every other tag.
+     * Applies one title, artist or album value to a batch, preserving every other tag.
      *
      * Non-playing files are rewritten now; the playing file is queued through the
      * deferred-editor path so a bulk edit cannot introduce the gap the single editor
      * avoids. The in-memory list and scan cache update immediately.
      */
-    fun setBulkMetadata(target: List<Track>, artist: String? = null, album: String? = null) {
+    fun setBulkMetadata(
+        target: List<Track>,
+        title: String? = null,
+        artist: String? = null,
+        album: String? = null,
+    ) {
         if (bulkEditRunning || target.isEmpty()) return
         bulkEditRunning = true
         bulkEditDone = 0
@@ -741,6 +748,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                         failed++
                     } else {
                         val next = metadata.copy(
+                            title = title ?: metadata.title,
                             artist = artist ?: metadata.artist,
                             album = album ?: metadata.album,
                         )
@@ -750,6 +758,8 @@ fun MusicPlayerApp(settings: AppSettings) {
                             when (TagEditor.write(context, track.uri, next)) {
                                 TagWriteResult.Success -> {
                                     updates[track.uri.toString()] = track.copy(
+                                        title = next.title.takeIf { it.isNotBlank() }
+                                            ?: track.title,
                                         artist = next.artist.takeIf { it.isNotBlank() },
                                         album = next.album.takeIf { it.isNotBlank() },
                                     )
@@ -1117,6 +1127,20 @@ fun MusicPlayerApp(settings: AppSettings) {
     }
 
     /**
+     * The kebab menu's Edit submenu. "Edit page" opens the full editor; the field
+     * edits reuse the bulk dialogs, so one song and many songs share one writer.
+     */
+    fun editSong(track: Track, action: SongEditAction) {
+        when (action) {
+            SongEditAction.Page -> editingTrack = track
+            SongEditAction.Title -> bulkTitleTarget = listOf(track)
+            SongEditAction.Artist -> bulkArtistTarget = listOf(track)
+            SongEditAction.Album -> bulkAlbumTarget = listOf(track)
+            SongEditAction.Tags -> openTags(track)
+        }
+    }
+
+    /**
      * Deletes a file only after the confirmation dialog accepted. Ratings, tags,
      * favourites and playlist entries go with it; if it was queued, the queue drops
      * that item so the player can never try to reopen a file that no longer exists.
@@ -1379,36 +1403,29 @@ fun MusicPlayerApp(settings: AppSettings) {
                     when (destination) {
                         Destination.Dashboard -> DashboardScreen(
                             tracks = tracks,
-                            extras = extras,
-                            nowPlaying = nowPlaying,
-                            isPlaying = isPlaying,
-                            onPlay = { track, queue -> play(track, queue) },
-                            onCompress = { selection -> openCompress(selection) },
+                            isScanning = isScanning,
+                            onRescan = { refreshToken++ },
+                            onFreeSpace = { showFreeSpace = true },
                             onOpenSongs = { navigate(Destination.Songs) },
                             onOpenFiles = { navigate(Destination.Files) },
                             onOpenAlbums = { navigate(Destination.Albums) },
                             onOpenArtists = { navigate(Destination.Artists) },
                             onOpenSettings = { navigate(Destination.Settings) },
-                            onFilesDeleted = { refreshToken++ },
                         )
                         Destination.Songs -> SongsScreen(
                             tracks = tracks,
                             addedAt = extras.addedAt,
                             currentTrackUri = nowPlaying?.uri?.toString(),
                             isPlaying = isPlaying,
-                            isScanning = isScanning,
                             hasLibraries = settings.libraries.isNotEmpty(),
                             onPlay = { track, queue -> play(track, queue) },
                             onShuffleAll = { shuffleEverything() },
                             onAddToPlaylist = { openAddToPlaylist(it) },
-                            onManageTags = { openTags(it) },
-                            onEditMetadata = { editingTrack = it },
+                            onEditSong = { track, action -> editSong(track, action) },
                             onCompress = { openCompress(listOf(it)) },
                             onLike = { extras.like(it.uri.toString()) },
                             onDislike = { dislike(it) },
                             onDelete = { deleteTarget = it },
-                            onRescan = { refreshToken++ },
-                            onFreeSpace = { showFreeSpace = true },
                         )
                         Destination.Files -> FilesScreen(
                             tracks = tracks,
@@ -1433,8 +1450,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                             },
                             onPlay = { track, queue -> play(track, queue) },
                             onAddToPlaylist = { openAddToPlaylist(it) },
-                            onManageTags = { openTags(it) },
-                            onEditMetadata = { editingTrack = it },
+                            onEditSong = { track, action -> editSong(track, action) },
                             onCompress = { openCompress(listOf(it)) },
                             onLike = { extras.like(it.uri.toString()) },
                             onDislike = { dislike(it) },
@@ -1452,6 +1468,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                             libraries = settings.libraries,
                             artVersion = artVersion,
                             starred = extras.starredAlbums,
+                            onToggleStar = { extras.toggleAlbumStarred(it) },
                             onOpen = { showAlbum(it) },
                         )
                         Destination.Artists -> CollectionsBrowserScreen(
@@ -1461,6 +1478,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                             libraries = settings.libraries,
                             artVersion = artVersion,
                             starred = extras.starredArtists,
+                            onToggleStar = { extras.toggleArtistStarred(it) },
                             onOpen = { showArtist(it) },
                         )
                         Destination.Search -> Unit
@@ -1498,13 +1516,14 @@ fun MusicPlayerApp(settings: AppSettings) {
                         onPlay = { track, queue -> play(track, queue) },
                         onPlayAll = { queue, shuffle -> if (queue.isNotEmpty()) play(queue.first(), queue, shuffle) },
                         onAddToPlaylist = { openAddToPlaylist(it) },
-                        onManageTags = { openTags(it) },
-                        onEditMetadata = { editingTrack = it },
+                        onEditSong = { track, action -> editSong(track, action) },
                         onCompress = { openCompress(listOf(it)) },
                         onLike = { extras.like(it.uri.toString()) },
                         onDislike = { dislike(it) },
                         onDelete = { deleteTarget = it },
                         onEdit = { editAlbum = albumName },
+                        isStarred = extras.isAlbumStarred(albumName),
+                        onToggleStar = { extras.toggleAlbumStarred(albumName) },
                         onReorder = { reordered ->
                             extras.setAlbumOrder(
                                 albumName,
@@ -1528,13 +1547,14 @@ fun MusicPlayerApp(settings: AppSettings) {
                         onPlay = { track, queue -> play(track, queue) },
                         onPlayAll = { queue, shuffle -> if (queue.isNotEmpty()) play(queue.first(), queue, shuffle) },
                         onAddToPlaylist = { openAddToPlaylist(it) },
-                        onManageTags = { openTags(it) },
-                        onEditMetadata = { editingTrack = it },
+                        onEditSong = { track, action -> editSong(track, action) },
                         onCompress = { openCompress(listOf(it)) },
                         onLike = { extras.like(it.uri.toString()) },
                         onDislike = { dislike(it) },
                         onDelete = { deleteTarget = it },
                         onEdit = { editArtist = artistName },
+                        isStarred = extras.isArtistStarred(artistName),
+                        onToggleStar = { extras.toggleArtistStarred(artistName) },
                     )
                 }
 
@@ -1560,8 +1580,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                             hasLibraries = settings.libraries.isNotEmpty(),
                             onPlay = { track, queue -> play(track, queue) },
                             onAddToPlaylist = { openAddToPlaylist(it) },
-                            onManageTags = { openTags(it) },
-                            onEditMetadata = { editingTrack = it },
+                            onEditSong = { track, action -> editSong(track, action) },
                             onCompress = { openCompress(listOf(it)) },
                             onLike = { extras.like(it.uri.toString()) },
                             onDislike = { dislike(it) },
@@ -1939,11 +1958,32 @@ fun MusicPlayerApp(settings: AppSettings) {
         }
 
         if (showTagEditor && target != null) {
+            // The same frequent tags the full editor offers, excluding those already on
+            // this song; adding or removing one updates the list immediately.
+            val suggestions = remember(target.uri, extras.tags) {
+                extras.frequentTags(exclude = extras.tagsFor(target.uri.toString()), limit = 8)
+            }
             ManageTagsDialog(
                 tags = extras.tagsFor(target.uri.toString()),
+                suggestions = suggestions,
                 onAdd = { extras.addTag(target.uri.toString(), it) },
                 onRemove = { extras.removeTag(target.uri.toString(), it) },
                 onDismiss = { showTagEditor = false },
+            )
+        }
+
+        bulkTitleTarget?.let { target ->
+            BulkTextFieldDialog(
+                title = stringResource(R.string.action_change_title),
+                label = stringResource(R.string.field_title),
+                supporting = pluralStringResource(R.plurals.bulk_apply_to, target.size, target.size),
+                initial = commonValue(target) { it.title },
+                onDismiss = { bulkTitleTarget = null },
+                onConfirm = { value ->
+                    bulkTitleTarget = null
+                    songSelection.clear()
+                    setBulkMetadata(target, title = value)
+                },
             )
         }
 
@@ -1953,6 +1993,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                 label = stringResource(R.string.field_artist),
                 supporting = pluralStringResource(R.plurals.bulk_apply_to, target.size, target.size),
                 initial = commonValue(target) { it.artist },
+                suggestions = knownArtists,
                 onDismiss = { bulkArtistTarget = null },
                 onConfirm = { value ->
                     bulkArtistTarget = null
@@ -1968,6 +2009,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                 label = stringResource(R.string.field_album),
                 supporting = pluralStringResource(R.plurals.bulk_apply_to, target.size, target.size),
                 initial = commonValue(target) { it.album },
+                suggestions = knownAlbums,
                 onDismiss = { bulkAlbumTarget = null },
                 onConfirm = { value ->
                     bulkAlbumTarget = null

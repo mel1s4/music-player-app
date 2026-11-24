@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Music Player 12 — Viroz Studio</title>
+<style>
+@font-face { font-family:'Chakra Petch'; src:url('../assets/fonts/ChakraPetch-Regular.ttf'); font-weight:400; }
+@font-face { font-family:'Chakra Petch'; src:url('../assets/fonts/ChakraPetch-SemiBold.ttf'); font-weight:600; }
+@font-face { font-family:'Chakra Petch'; src:url('../assets/fonts/ChakraPetch-Bold.ttf'); font-weight:700; }
+@font-face { font-family:'Inter'; src:url('../assets/fonts/Inter-Variable.ttf'); font-weight:100 900; }
+@font-face { font-family:'JetBrains Mono'; src:url('../assets/fonts/JetBrainsMono-Variable.ttf'); font-weight:100 800; }
+* { box-sizing:border-box; }
+html, body { margin:0; width:1080px; height:1080px; overflow:hidden; background:#05070c; }
+body { color:#eef6ff; font-family:'Inter', sans-serif; -webkit-font-smoothing:antialiased; }
+.canvas { position:relative; width:1080px; height:1080px; overflow:hidden;
+  background:
+    radial-gradient(900px 650px at 83% 24%, rgba(14,187,238,.17), transparent 68%),
+    radial-gradient(700px 700px at 6% 96%, rgba(43,140,255,.12), transparent 70%),
+    #05070c; }
+.grid { position:absolute; inset:0; opacity:.62;
+  background-image:
+    linear-gradient(rgba(238,246,255,.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(238,246,255,.055) 1px, transparent 1px),
+    linear-gradient(rgba(238,246,255,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(238,246,255,.045) 1px, transparent 1px);
+  background-size:54px 54px, 54px 54px, 216px 216px, 216px 216px;
+  mask-image:linear-gradient(180deg, rgba(0,0,0,.9), transparent 82%); }
+.vignette { position:absolute; inset:0; background:radial-gradient(circle at 50% 45%, transparent 30%, rgba(0,0,0,.52) 100%); }
+.scan { position:absolute; inset:0; background:repeating-linear-gradient(0deg, transparent 0 3px, rgba(0,0,0,.13) 3px 4px); opacity:.28; }
+.bg-number { position:absolute; right:650px; top:135px; font-family:'Chakra Petch'; font-weight:700; font-size:470px; line-height:1; letter-spacing:-.06em; color:rgba(14,187,238,.045); }
+header { position:absolute; left:64px; top:46px; right:64px; height:72px; display:flex; align-items:center; }
+.brand { width:164px; height:auto; display:block; }
+.meta { margin-left:22px; font-family:'JetBrains Mono'; font-size:12px; line-height:1.65; letter-spacing:.14em; color:#dfeaf7; }
+.meta small { display:block; color:#6f8094; font-size:10px; letter-spacing:.17em; }
+.counter { margin-left:auto; font-family:'Chakra Petch'; font-weight:600; font-size:18px; letter-spacing:.08em; color:#eef6ff; }
+.counter span { color:rgba(14,187,238,.95); }
+.topline { position:absolute; left:64px; right:64px; top:140px; height:1px; background:rgba(238,246,255,.13); }
+.topline:before { content:''; position:absolute; left:0; top:-1px; width:140px; height:3px; background:#0EBBEE; box-shadow:0 0 20px rgba(14,187,238,.6); }
+.copy { position:absolute; top:184px; width:550px; height:752px; display:flex; flex-direction:column; left:462px; }
+.eyebrow { display:flex; align-items:center; gap:10px; font-family:'JetBrains Mono'; font-size:12px; letter-spacing:.17em; color:#0EBBEE; text-transform:uppercase; }
+.eyebrow .tick { width:9px; height:9px; background:#0EBBEE; box-shadow:0 0 15px rgba(14,187,238,.8); }
+.eyebrow .dim { color:#6c7c90; }
+h1 { margin:26px 0 0; font-family:'Chakra Petch'; font-weight:700; font-size:76px; line-height:.94; letter-spacing:-.018em; text-transform:uppercase; color:#eef6ff; }
+h1 em { font-style:normal; color:#0EBBEE; }
+.rule { width:74px; height:3px; margin:28px 0 22px; background:#0EBBEE; box-shadow:0 0 18px rgba(14,187,238,.55); }
+p { margin:0; max-width:530px; font-size:25px; line-height:1.42; letter-spacing:-.01em; color:#aebdcc; }
+ul { list-style:none; padding:0; margin:26px 0 0; display:grid; gap:10px; }
+li { position:relative; padding-left:23px; font-size:18px; line-height:1.35; color:#d7e3ef; }
+li:before { content:''; position:absolute; left:0; top:6px; width:7px; height:7px; background:#0EBBEE; }
+.cta-wrap { margin-top:auto; }
+.cta { display:inline-flex; align-items:center; gap:16px; padding:17px 22px; background:#0EBBEE; color:#05070c; font-family:'Chakra Petch'; font-weight:700; font-size:17px; letter-spacing:.11em; box-shadow:0 0 30px rgba(14,187,238,.28); }
+.cta .arrow { font-size:24px; line-height:.7; }
+.url { margin-top:11px; font-family:'JetBrains Mono'; font-size:11px; letter-spacing:.03em; color:#718296; }
+.device { position:absolute; top:150px; width:368px; height:792px; left:64px; }
+.device-glow { position:absolute; inset:-36px; background:radial-gradient(ellipse at 50% 55%, rgba(14,187,238,.25), transparent 68%); filter:blur(12px); }
+.device-body { position:absolute; inset:0; padding:10px; border-radius:46px;
+  background:linear-gradient(145deg,#1d2634 0%,#090d14 48%,#151e2b 100%);
+  border:1px solid rgba(196,216,238,.26);
+  box-shadow:0 38px 90px rgba(0,0,0,.72), 0 0 0 1px rgba(0,0,0,.65), 0 0 55px rgba(14,187,238,.16); }
+.screen { display:block; width:348px; height:772px; object-fit:cover; border-radius:37px; background:#0b1018; }
+.reflection { position:absolute; left:10px; top:10px; width:348px; height:772px; border-radius:37px; pointer-events:none;
+  background:linear-gradient(125deg, rgba(255,255,255,.12), transparent 24%, transparent 62%, rgba(255,255,255,.035)); }
+.corner { position:absolute; width:24px; height:24px; border-color:rgba(14,187,238,.65); border-style:solid; }
+.corner.tl { left:40px; top:162px; border-width:1px 0 0 1px; }
+.corner.br { right:64px; bottom:104px; border-width:0 1px 1px 0; }
+footer { position:absolute; left:64px; right:64px; bottom:38px; display:flex; align-items:center; font-family:'JetBrains Mono'; font-size:10px; letter-spacing:.13em; color:#596a7e; }
+footer .mid { margin-left:auto; margin-right:auto; }
+footer .ver { color:rgba(14,187,238,.82); }
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="grid"></div>
+  <div class="bg-number">12</div>
+  <div class="vignette"></div>
+  <div class="scan"></div>
+  <header>
+    <img class="brand" src="../assets/viroz-studio-logo.png" alt="Viroz Studio">
+    <div class="meta">VIROZ STUDIO<small>MUSIC PLAYER / ANDROID</small></div>
+    <div class="counter">12 <span>/ 12</span></div>
+  </header>
+  <div class="topline"></div>
+  <main class="copy">
+    <div class="eyebrow"><span class="tick"></span>GRATIS / CÓDIGO ABIERTO / ANDROID 8+<span class="dim">/ 12</span></div>
+    <h1>TU BIBLIOTECA<br>LOCAL<br><em>TE ESPERA.</em></h1>
+    <div class="rule"></div>
+    <p>Gratis, de código abierto y sin ataduras. Descarga Music Player y vuelve a escuchar lo que ya es tuyo.</p>
+    <ul><li>Android 8.0 o superior</li><li>Gratis y código abierto</li><li>Hecho por Viroz Studio</li></ul>
+    <div class="cta-wrap">
+      <div class="cta">DESCARGA GRATIS <span class="arrow">↗</span></div>
+      <div class="url">github.com/mel1s4/music-player-app</div>
+    </div>
+  </main>
+  <div class="device">
+    <div class="device-glow"></div>
+    <div class="device-body"><img class="screen" src="../../../docs/screenshots/current/01-home/01-dashboard.png" alt="12-download"><div class="reflection"></div></div>
+  </div>
+  <div class="corner tl"></div><div class="corner br"></div>
+  <footer><span>VIROZSTUDIO.COM</span><span class="mid">HECHO CON CUIDADO / MX</span><span class="ver">v0.6.1</span></footer>
+</div>
+</body>
+</html>

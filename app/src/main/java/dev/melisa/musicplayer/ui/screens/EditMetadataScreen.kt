@@ -789,28 +789,8 @@ private fun TagsSection(
     val tags = extras.tagsFor(uri)
 
     // The eight most-used tags across the library that this song does not have yet.
-    // Counting is per track and case-insensitive, and the first spelling wins.
     val frequentTags = remember(extras.tags, tags) {
-        val onSong = tags.map { it.lowercase() }.toSet()
-        val counts = mutableMapOf<String, Int>()
-        val labels = mutableMapOf<String, String>()
-        for (list in extras.tags.values) {
-            for (raw in list) {
-                val label = raw.trim()
-                if (label.isEmpty()) continue
-                val key = label.lowercase()
-                counts[key] = (counts[key] ?: 0) + 1
-                labels.putIfAbsent(key, label)
-            }
-        }
-        counts.entries
-            .filterNot { onSong.contains(it.key) }
-            .sortedWith(
-                compareByDescending<Map.Entry<String, Int>> { it.value }
-                    .thenBy { labels[it.key].orEmpty().lowercase() },
-            )
-            .mapNotNull { labels[it.key] }
-            .take(8)
+        extras.frequentTags(exclude = tags, limit = 8)
     }
 
     SectionTitle(stringResource(R.string.tags_title))

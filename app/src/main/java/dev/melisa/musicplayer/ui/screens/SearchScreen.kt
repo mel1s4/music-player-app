@@ -64,6 +64,7 @@ import dev.melisa.musicplayer.ui.components.CyberBadge
 import dev.melisa.musicplayer.ui.components.MessageState
 import dev.melisa.musicplayer.ui.components.ScanningState
 import dev.melisa.musicplayer.ui.components.SectionKicker
+import dev.melisa.musicplayer.ui.components.SongEditAction
 import dev.melisa.musicplayer.ui.components.SongRow
 import dev.melisa.musicplayer.ui.theme.Cyber
 import dev.melisa.musicplayer.ui.theme.cyberClick
@@ -90,8 +91,7 @@ fun SearchScreen(
     hasLibraries: Boolean,
     onPlay: (Track, List<Track>) -> Unit,
     onAddToPlaylist: (Track) -> Unit,
-    onManageTags: (Track) -> Unit,
-    onEditMetadata: (Track) -> Unit,
+    onEditSong: (Track, SongEditAction) -> Unit,
     onCompress: (Track) -> Unit,
     onLike: (Track) -> Unit,
     onDislike: (Track) -> Unit,
@@ -218,8 +218,7 @@ fun SearchScreen(
                     onForgetRecent = { recent = emptyList() },
                     onPlay = onPlay,
                     onAddToPlaylist = onAddToPlaylist,
-                    onManageTags = onManageTags,
-                    onEditMetadata = onEditMetadata,
+                    onEditSong = onEditSong,
                     onCompress = onCompress,
                     onLike = onLike,
                     onDislike = onDislike,
@@ -255,8 +254,7 @@ private fun Results(
     onForgetRecent: () -> Unit,
     onPlay: (Track, List<Track>) -> Unit,
     onAddToPlaylist: (Track) -> Unit,
-    onManageTags: (Track) -> Unit,
-    onEditMetadata: (Track) -> Unit,
+    onEditSong: (Track, SongEditAction) -> Unit,
     onCompress: (Track) -> Unit,
     onLike: (Track) -> Unit,
     onDislike: (Track) -> Unit,
@@ -371,8 +369,7 @@ private fun Results(
                     // the next song is the next result in the list.
                     onClick = { onPlay(track, songHits) },
                     onAddToPlaylist = { onAddToPlaylist(track) },
-                    onManageTags = { onManageTags(track) },
-                    onEditMetadata = { onEditMetadata(track) },
+                    onEdit = { action -> onEditSong(track, action) },
                     onCompress = { onCompress(track) },
                     onLike = { onLike(track) },
                     onDislike = { onDislike(track) },

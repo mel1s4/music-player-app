@@ -14,6 +14,38 @@ project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - More library statistics, and a listening-history screen built on the recorded play
   timestamps.
 
+## [0.7.0] - 2026-11-24
+
+### Added
+
+- Star toggles directly on album and artist archive cards and on their detail pages,
+  so a collection can be pinned without opening its artwork editor. Starred items keep
+  their collapsible section at the top of the archive.
+
+### Changed
+
+- The **Your library** summary moved from the top of Songs to the top of the Dashboard,
+  above the Songs / Files / Albums / Artists browse tiles: song count, storage used,
+  hours, **Rescan** and **Free up space**. Songs now opens straight into its sort and
+  shuffle controls.
+- Bulk selection now starts from **Bulk selection** in a song's kebab menu instead of a
+  long-press. The entry is available on Songs, Search, Files, album and artist pages and
+  on playlist rows, and the selected song is the first one in the selection.
+- A song's kebab menu now has an **Edit** entry that opens a submenu instead of jumping
+  to the editor: **Edit page**, **Change title**, **Set artist**, **Set album** and
+  **Edit tags**. The artist and album dialogs autocomplete from the library like the
+  editor's fields, and the tags dialog shows the song's tags as checked pills plus the
+  frequently used library tags as one-tap pills.
+- Album and artist names can wrap to two lines on the Albums and Artists pages and in
+  the album headers of an artist page, so a long name is no longer cut after one line.
+
+### Removed
+
+- The **Recently added**, **Most liked** and **Most disliked** sections on the Dashboard,
+  along with the bulk-selection bar that came with the disliked list. Ratings are
+  unchanged and still set the weighted-shuffle score; the Liked / Disliked / No rating /
+  Unheard smart playlists cover browsing by rating.
+
 ## [0.6.1] - 2026-11-22
 
 ### Changed

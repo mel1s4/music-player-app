@@ -169,6 +169,34 @@ class LibraryExtras(context: Context) {
     }
 
     /**
+     * The most-used tags across the library, excluding [exclude] (case-insensitive) and
+     * capped at [limit]. Counting is per track and the first spelling wins, so the same
+     * list backs the editor's "Frequently used" pills and the quick tags popup.
+     */
+    fun frequentTags(exclude: Collection<String> = emptyList(), limit: Int = 8): List<String> {
+        val skip = exclude.map { it.lowercase() }.toSet()
+        val counts = mutableMapOf<String, Int>()
+        val labels = mutableMapOf<String, String>()
+        for (list in tags.values) {
+            for (raw in list) {
+                val label = raw.trim()
+                if (label.isEmpty()) continue
+                val key = label.lowercase()
+                counts[key] = (counts[key] ?: 0) + 1
+                labels.putIfAbsent(key, label)
+            }
+        }
+        return counts.entries
+            .filterNot { skip.contains(it.key) }
+            .sortedWith(
+                compareByDescending<Map.Entry<String, Int>> { it.value }
+                    .thenBy { labels[it.key].orEmpty().lowercase() },
+            )
+            .mapNotNull { labels[it.key] }
+            .take(limit)
+    }
+
+    /**
      * Drops every app-side trace of a file that has been deleted from the device.
      * Ratings, favourites, tags, first-seen stamps and playlist memberships all point
      * at a URI that can never resolve again, so they are removed now instead of being
@@ -481,7 +509,7 @@ class LibraryExtras(context: Context) {
     /**
      * Stamps tracks that are new since the last scan. [entries] pairs each URI with the
      * file's modification time (0 when unknown) — only unknown URIs are touched, so a
-     * rescan never reshuffles the "recently added" list.
+     * rescan never reshuffles the date-added order.
      */
     fun registerAdded(entries: List<Pair<String, Long>>) {
         if (entries.isEmpty()) return

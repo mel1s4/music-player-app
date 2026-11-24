@@ -40,8 +40,8 @@ import dev.melisa.musicplayer.ui.theme.neonGlow
 /**
  * The library summary: size, track and album counts, and the two upkeep actions.
  *
- * It used to top the Dashboard; it now tops Songs, where the user is already looking
- * at the tracks it describes.
+ * It opens the Dashboard, above the browse tiles, so the state of the scan is the first
+ * thing the user sees.
  */
 @Composable
 fun LibraryHero(

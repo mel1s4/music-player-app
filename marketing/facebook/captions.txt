@@ -1,0 +1,139 @@
+01 — LOCAL-FIRST
+Tu música no necesita una nube.
+
+Music Player es un reproductor para Android que trabaja con tus carpetas: escanea tu biblioteca, reproduce en segundo plano y no sube nada a ningún servidor.
+
+Sin cuenta. Sin anuncios. Sin nube.
+
+📲 Android 8.0+ · Descarga gratis: https://github.com/mel1s4/music-player-app/releases/latest
+
+#VirozStudio #MusicPlayer #Android #MusicaLocal #SinNubes #AppIndie
+
+------------------------------------------------------------
+
+02 — PRIVACIDAD
+Tu biblioteca es tuya. Punto.
+
+Sin cuenta, sin anuncios y sin permiso de red. Music Player solo accede a las carpetas que tú eliges con el selector de Android, y todo lo que guarda se queda en tu teléfono.
+
+Privacidad por diseño, no como extra.
+
+📲 Android 8.0+ · Descarga gratis: https://github.com/mel1s4/music-player-app/releases/latest
+
+#VirozStudio #MusicPlayer #Privacidad #Android #MusicaLocal #AppIndie
+
+------------------------------------------------------------
+
+03 — ORDEN
+¿Por dónde empiezo? Por donde tú quieras.
+
+Ordena canciones, álbumes, artistas y carpetas por fecha de añadido, título, artista o duración. Las listas largas incluyen una barra alfabética para saltar directo a la letra que buscas.
+
+📲 Android 8.0+ · Descarga gratis: https://github.com/mel1s4/music-player-app/releases/latest
+
+#VirozStudio #MusicPlayer #Android #Organizacion #MusicaLocal #AppIndie
+
+------------------------------------------------------------
+
+04 — DESTACADOS
+Lo que más escuchas, siempre a mano.
+
+Abre el editor de un álbum o artista y márcalo con una estrella. Las colecciones destacadas aparecen en una sección plegable al inicio de Álbumes y Artistas, sin romper el orden alfabético.
+
+📲 Android 8.0+ · Descarga gratis: https://github.com/mel1s4/music-player-app/releases/latest
+
+#VirozStudio #MusicPlayer #Android #MusicaLocal #Colecciones #AppIndie
+
+------------------------------------------------------------
+
+05 — CARPETAS
+Tus archivos, sin perder el hilo.
+
+Navega por carpetas con una ruta clara, fija las que más usas y usa el menú de cada carpeta para reordenar su contenido, moverla o desglosarla en la carpeta padre.
+
+📲 Android 8.0+ · Descarga gratis: https://github.com/mel1s4/music-player-app/releases/latest
+
+#VirozStudio #MusicPlayer #Android #Archivos #MusicaLocal #AppIndie
+
+------------------------------------------------------------
+
+06 — EL TIEMPO, ANTES DE LA PORTADA
+El tiempo, antes de la portada.
+
+La barra de progreso de Music Player es una forma de onda real y ahora vive antes de la carátula. Toca o arrastra para buscar dentro de la canción: los picos y valles muestran la energía de cada tramo.
+
+📲 Android 8.0+ · Descarga gratis: https://github.com/mel1s4/music-player-app/releases/latest
+
+#VirozStudio #MusicPlayer #Android #NowPlaying #MusicaLocal #Diseno
+
+------------------------------------------------------------
+
+07 — ETIQUETAS
+Etiquetar no debería ser un trabajo.
+
+Music Player edita metadatos reales y guarda tus etiquetas al instante. En el editor, las ocho etiquetas más usadas de tu biblioteca aparecen como botones: un toque y listo.
+
+📲 Android 8.0+ · Descarga gratis: https://github.com/mel1s4/music-player-app/releases/latest
+
+#VirozStudio #MusicPlayer #Android #Etiquetas #Metadatos #MusicaLocal
+
+------------------------------------------------------------
+
+08 — BÚSQUEDA
+Tira, busca, suena.
+
+Desde el inicio de cualquier pantalla, tira hacia abajo para abrir la búsqueda. Primero verás una pista con la barra de progreso; si sigues tirando, la búsqueda se revela. Si sueltas antes, vuelve atrás.
+
+Encuentra canciones, álbumes y artistas al instante, con filtros por tipo y resultados mientras escribes.
+
+📲 Android 8.0+ · Descarga gratis: https://github.com/mel1s4/music-player-app/releases/latest
+
+#VirozStudio #MusicPlayer #Android #Busqueda #MusicaLocal #UX
+
+------------------------------------------------------------
+
+09 — SELECCIÓN EN LOTE
+Una canción, dos, o toda la lista.
+
+Mantén presionada cualquier fila para activar la selección. Desde la barra inferior puedes definir artista o álbum, añadir etiquetas, sumar a una lista, comprimir o borrar en lote.
+
+📲 Android 8.0+ · Descarga gratis: https://github.com/mel1s4/music-player-app/releases/latest
+
+#VirozStudio #MusicPlayer #Android #Productividad #MusicaLocal #AppIndie
+
+------------------------------------------------------------
+
+10 — ESPACIO
+Haz sitio sin borrar recuerdos.
+
+Ordena tu biblioteca por tamaño, elige las pistas más pesadas y conviértelas a AAC con el bitrate que prefieras. La app te muestra el ahorro estimado y puedes conservar el archivo original.
+
+📲 Android 8.0+ · Descarga gratis: https://github.com/mel1s4/music-player-app/releases/latest
+
+#VirozStudio #MusicPlayer #Android #Almacenamiento #AAC #MusicaLocal
+
+------------------------------------------------------------
+
+11 — PERSONALIZACIÓN
+La app se adapta a ti, no al revés.
+
+Elige tema claro, oscuro o del sistema. Activa la mano dominante para espejar la barra inferior y elige entre cinco estilos de icono para la pantalla de inicio.
+
+Tu teléfono, tu forma de escuchar.
+
+📲 Android 8.0+ · Descarga gratis: https://github.com/mel1s4/music-player-app/releases/latest
+
+#VirozStudio #MusicPlayer #Android #Personalizacion #Diseno #MusicaLocal
+
+------------------------------------------------------------
+
+12 — DESCARGA
+Tu biblioteca local te espera.
+
+Music Player es gratis y de código abierto. Descarga el APK para Android 8.0 o superior y empieza a escuchar tus archivos sin cuentas ni nubes.
+
+Hecho con cuidado por Viroz Studio.
+
+📲 Descarga gratis: https://github.com/mel1s4/music-player-app/releases/latest
+
+#VirozStudio #MusicPlayer #Android #OpenSource #CodigoAbierto #MusicaLocal #AppIndie

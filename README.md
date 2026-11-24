@@ -21,7 +21,7 @@ account, no upload, no network permission.
 - **Android 8.0 (API 26) or newer.**
 - The release page includes a **SHA-256 checksum**; verify it before installing.
 - GitHub Releases is the official distribution channel; the latest version is
-  [v0.6.1](https://github.com/mel1s4/music-player-app/releases/tag/v0.6.1).
+  [v0.7.0](https://github.com/mel1s4/music-player-app/releases/tag/v0.7.0).
 - Prefer to build it yourself? See [Build and run](#build-and-run).
 - Already have a debug/test build installed? Uninstall it first — Android will not
   update across different signing keys.
@@ -45,20 +45,21 @@ notes, palette, contrast measurements and motion inventory are in
 
 - **Multiple library folders** picked through the Storage Access Framework. No broad
   storage permission and no access to anything you did not explicitly grant.
-- **Dashboard** as a browse hub: Songs, Files, Albums and Artists entries, recently
-  added tracks, and most liked/disliked lists.
+- **Dashboard** opening with the **Your library** summary (song count, storage, hours,
+  **Rescan** / **Free up space**) above the Songs, Files, Albums and Artists browse
+  entries.
 - **Fast launches** — the last completed scan is painted immediately from the local
-  metadata cache while a fresh scan runs behind it. The Songs summary's **Rescan**
+  metadata cache while a fresh scan runs behind it. The Dashboard summary's **Rescan**
   button shows a spinner and disables itself during the refresh; your library stays usable.
 - **Incremental scanning** — file metadata is cached by URI, size and modification time,
   so only new or edited files are reopened. Deleted files are pruned from the cache.
-- **Songs view** with the library summary at the top (song count, storage, hours,
-  **Rescan** / **Free up space**), date added / title / artist / duration sorting
-  (date added is the default), an alphabet rail, and a count badge.
+- **Songs view** with date added / title / artist / duration sorting (date added is the
+  default), an alphabet rail, and a count badge.
 - **Albums and artists** collected from track tags, with cover art and per-collection
   pages that open inside the tab (playback controls stay visible).
-- **Star albums and artists** from their edit pages; starred collections appear in a
-  collapsible **Starred** section at the top of their archive.
+- **Star albums and artists** from their archive cards, detail pages or artwork
+  editors; starred collections appear in a collapsible **Starred** section at the top
+  of their archive.
 - **Albums and manual playlists** can be reordered by dragging the handle beside each
   track number. Album order is remembered; smart and dynamic lists remain read-only.
 - **Albums, Artists and Files** share the Songs ordering menu (date added, title,
@@ -73,8 +74,12 @@ notes, palette, contrast measurements and motion inventory are in
 - **Search** across tracks, albums and artists, with recent queries. A deliberate pull
   down from the top first shows a progress cue, then reveals Search after a preview
   threshold; releasing commits. The top-bar magnifier opens it directly.
-- **Long-press bulk selection** on any song row: set the artist or album, add or remove
-  tags, add the whole selection to a playlist, or compress/delete it after confirmation.
+- **Bulk selection** from any song row's kebab menu: set the artist or album, add or
+  remove tags, add the whole selection to a playlist, or compress/delete it after
+  confirmation.
+- **Quick edits** from that same kebab menu: its **Edit** submenu opens the full editor,
+  changes the title, sets the artist or album with the editor's autocomplete, or toggles
+  tags as checked pills without leaving the list.
 
 ### Playback
 
@@ -102,8 +107,8 @@ notes, palette, contrast measurements and motion inventory are in
 
 - Signed integer ratings (neutral `0`) shown as icon-only thumbs; the score sets the
   weight used by shuffle.
-- Bulk-select disliked songs to reset their scores, delete the files, or compress
-  several at once from the Dashboard.
+- Liked, disliked, unrated and unheard songs get their own **smart playlists** on
+  Playlists, so ratings stay browsable without taking space on the Dashboard.
 - Favourites and free-form tags per track. Tag Add/Remove is saved immediately; the
   editor also offers the eight most-used library tags the song lacks as one-tap chips,
   and its Save button commits a tag still typed in the Add field.

@@ -1,5 +1,6 @@
 package dev.melisa.musicplayer.ui.components
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,8 +13,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -28,32 +32,100 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.melisa.musicplayer.R
 
-/** One text value applied to every selected track (artist or album). */
+/** One text value applied to a track (title, artist or album). */
 @Composable
 fun BulkTextFieldDialog(
     title: String,
     label: String,
     supporting: String,
     initial: String,
+    suggestions: List<String> = emptyList(),
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
 ) {
     var value by remember(initial) { mutableStateOf(initial) }
+    var expanded by remember { mutableStateOf(false) }
+
+    // Same ranking as the editor's autocomplete: exact, then prefix, then the alphabet.
+    // Existing values are a source, not a closed list, so free text stays valid.
+    val options = remember(value, suggestions) {
+        val needle = value.trim()
+        val matches = if (needle.isEmpty()) {
+            suggestions
+        } else {
+            suggestions.filter { it.contains(needle, ignoreCase = true) }
+        }
+        matches
+            .sortedWith(
+                compareBy<String> { !it.equals(needle, ignoreCase = true) }
+                    .thenBy { !it.startsWith(needle, ignoreCase = true) }
+                    .thenBy { it.lowercase() },
+            )
+            .take(60)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            OutlinedTextField(
-                value = value,
-                onValueChange = { value = it },
-                singleLine = true,
-                label = { Text(label) },
-                supportingText = { Text(supporting) },
-            )
+            Box {
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = { typed ->
+                        value = typed
+                        if (suggestions.isNotEmpty()) {
+                            expanded = typed.isBlank() ||
+                                suggestions.any { it.contains(typed.trim(), ignoreCase = true) }
+                        }
+                    },
+                    singleLine = true,
+                    label = { Text(label) },
+                    supportingText = { Text(supporting) },
+                    trailingIcon = if (suggestions.isNotEmpty()) {
+                        {
+                            IconButton(onClick = { expanded = !expanded }) {
+                                Icon(
+                                    imageVector = Icons.Filled.ArrowDropDown,
+                                    contentDescription = stringResource(
+                                        R.string.metadata_choose_existing,
+                                    ),
+                                )
+                            }
+                        }
+                    } else {
+                        null
+                    },
+                )
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                ) {
+                    if (options.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.metadata_no_matches),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        options.forEach { option ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(option, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                },
+                                onClick = {
+                                    value = option
+                                    expanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+            }
         },
         confirmButton = {
             TextButton(

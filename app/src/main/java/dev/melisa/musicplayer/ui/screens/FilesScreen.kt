@@ -62,6 +62,7 @@ import dev.melisa.musicplayer.ui.components.CyberBadge
 import dev.melisa.musicplayer.ui.components.MessageState
 import dev.melisa.musicplayer.ui.components.ScanningState
 import dev.melisa.musicplayer.ui.components.SectionKicker
+import dev.melisa.musicplayer.ui.components.SongEditAction
 import dev.melisa.musicplayer.ui.components.SongRow
 import dev.melisa.musicplayer.ui.components.TrackSort
 import dev.melisa.musicplayer.ui.components.TrackSortButton
@@ -91,8 +92,7 @@ fun FilesScreen(
     onExplodeFolder: (path: String, tracks: List<Track>) -> Unit,
     onPlay: (Track, List<Track>) -> Unit,
     onAddToPlaylist: (Track) -> Unit,
-    onManageTags: (Track) -> Unit,
-    onEditMetadata: (Track) -> Unit,
+    onEditSong: (Track, SongEditAction) -> Unit,
     onCompress: (Track) -> Unit,
     onLike: (Track) -> Unit,
     onDislike: (Track) -> Unit,
@@ -342,8 +342,7 @@ fun FilesScreen(
                                 // Playing from a folder queues that folder and everything under it.
                                 onClick = { onPlay(track, playQueue) },
                                 onAddToPlaylist = { onAddToPlaylist(track) },
-                                onManageTags = { onManageTags(track) },
-                                onEditMetadata = { onEditMetadata(track) },
+                                onEdit = { action -> onEditSong(track, action) },
                                 onCompress = { onCompress(track) },
                                 onLike = { onLike(track) },
                                 onDislike = { onDislike(track) },

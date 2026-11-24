@@ -51,10 +51,10 @@ import dev.melisa.musicplayer.data.Track
 import dev.melisa.musicplayer.ui.components.AlphabetRail
 import dev.melisa.musicplayer.ui.components.AlphabetSectionHeader
 import dev.melisa.musicplayer.ui.components.CyberBadge
-import dev.melisa.musicplayer.ui.components.LibraryHero
 import dev.melisa.musicplayer.ui.components.MessageState
 import dev.melisa.musicplayer.ui.components.ScanningState
 import dev.melisa.musicplayer.ui.components.SectionKicker
+import dev.melisa.musicplayer.ui.components.SongEditAction
 import dev.melisa.musicplayer.ui.components.SongRow
 import dev.melisa.musicplayer.ui.components.TrackSort
 import dev.melisa.musicplayer.ui.components.TrackSortButton
@@ -73,19 +73,15 @@ fun SongsScreen(
     addedAt: Map<String, Long>,
     currentTrackUri: String?,
     isPlaying: Boolean,
-    isScanning: Boolean,
     hasLibraries: Boolean,
     onPlay: (Track, List<Track>) -> Unit,
     onShuffleAll: () -> Unit,
     onAddToPlaylist: (Track) -> Unit,
-    onManageTags: (Track) -> Unit,
-    onEditMetadata: (Track) -> Unit,
+    onEditSong: (Track, SongEditAction) -> Unit,
     onCompress: (Track) -> Unit,
     onLike: (Track) -> Unit,
     onDislike: (Track) -> Unit,
     onDelete: (Track) -> Unit,
-    onRescan: () -> Unit,
-    onFreeSpace: () -> Unit,
 ) {
     var sort by rememberSaveable { mutableStateOf(TrackSort.DateAdded) }
 
@@ -105,15 +101,6 @@ fun SongsScreen(
 
     // Sections and the letter rail only exist for the alphabetical orders; duration
     // and date sorting have no alphabet to jump through.
-    val albums = remember(tracks) {
-        tracks.orEmpty()
-            .mapNotNull { it.album?.takeIf { name -> name.isNotBlank() } }
-            .distinct()
-            .size
-    }
-    val hours = remember(tracks) { tracks.orEmpty().sumOf { it.durationMs } / 3_600_000.0 }
-    val sizeBytes = remember(tracks) { tracks.orEmpty().sumOf { it.sizeBytes } }
-
     val sections = remember(sorted, sort) {
         if (sort == TrackSort.Duration || sort == TrackSort.DateAdded) {
             emptyList()
@@ -141,11 +128,11 @@ fun SongsScreen(
         if (sections.isEmpty()) sorted else sections.flatMap { it.tracks }
     }
 
-    // Item index of each section header: two fixed header rows come first, then every
-    // section contributes its header plus its songs.
+    // Item index of each section header: the sort/shuffle controls row comes first,
+    // then every section contributes its header plus its songs.
     val sectionStart = remember(sections) {
         buildMap {
-            var index = 2
+            var index = 1
             sections.forEach { section ->
                 put(section.label, index)
                 index += 1 + section.tracks.size
@@ -185,19 +172,6 @@ fun SongsScreen(
                     .padding(end = if (showIndex) 24.dp else 0.dp),
                 contentPadding = PaddingValues(top = 4.dp, bottom = 16.dp),
             ) {
-                item(key = "hero") {
-                    LibraryHero(
-                        songs = sorted.size,
-                        albums = albums,
-                        sizeBytes = sizeBytes,
-                        hours = hours,
-                        isScanning = isScanning,
-                        onRescan = onRescan,
-                        onFreeSpace = onFreeSpace,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-                    )
-                }
-
                 item(key = "controls") {
                     Row(
                         modifier = Modifier
@@ -238,8 +212,7 @@ fun SongsScreen(
                             isPlaying = isPlaying,
                             onClick = { onPlay(track, displayOrder) },
                             onAddToPlaylist = { onAddToPlaylist(track) },
-                            onManageTags = { onManageTags(track) },
-                            onEditMetadata = { onEditMetadata(track) },
+                            onEdit = { action -> onEditSong(track, action) },
                             onCompress = { onCompress(track) },
                             onLike = { onLike(track) },
                             onDislike = { onDislike(track) },
@@ -259,8 +232,7 @@ fun SongsScreen(
                                 isPlaying = isPlaying,
                                 onClick = { onPlay(track, displayOrder) },
                                 onAddToPlaylist = { onAddToPlaylist(track) },
-                                onManageTags = { onManageTags(track) },
-                                onEditMetadata = { onEditMetadata(track) },
+                                onEdit = { action -> onEditSong(track, action) },
                                 onCompress = { onCompress(track) },
                                 onLike = { onLike(track) },
                                 onDislike = { onDislike(track) },

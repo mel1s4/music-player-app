@@ -19,6 +19,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,6 +40,7 @@ import dev.melisa.musicplayer.R
 import dev.melisa.musicplayer.data.Track
 import dev.melisa.musicplayer.data.songFileInfo
 import dev.melisa.musicplayer.ui.components.SectionKicker
+import dev.melisa.musicplayer.ui.components.SongEditAction
 import dev.melisa.musicplayer.ui.components.SongRow
 
 /** One album inside an artist page. [year] is null when no track carries a usable year. */
@@ -67,13 +70,14 @@ fun ArtistScreen(
     onPlay: (Track, List<Track>) -> Unit,
     onPlayAll: (List<Track>, Boolean) -> Unit,
     onAddToPlaylist: (Track) -> Unit,
-    onManageTags: (Track) -> Unit,
-    onEditMetadata: (Track) -> Unit,
+    onEditSong: (Track, SongEditAction) -> Unit,
     onCompress: (Track) -> Unit,
     onLike: (Track) -> Unit,
     onDislike: (Track) -> Unit,
     onDelete: (Track) -> Unit,
     onEdit: () -> Unit,
+    isStarred: Boolean = false,
+    onToggleStar: () -> Unit = {},
 ) {
     val sections = remember(tracks) {
         tracks
@@ -121,6 +125,19 @@ fun ArtistScreen(
                         text = pluralStringResource(R.plurals.song_count, tracks.size, tracks.size),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = onToggleStar) {
+                    Icon(
+                        imageVector = if (isStarred) Icons.Filled.Star else Icons.Filled.StarBorder,
+                        contentDescription = stringResource(
+                            if (isStarred) R.string.collections_unstar else R.string.collections_star,
+                        ),
+                        tint = if (isStarred) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                     )
                 }
                 IconButton(onClick = onEdit) {
@@ -186,7 +203,7 @@ fun ArtistScreen(
                                     text = section.album ?: stringResource(R.string.album_unknown),
                                     style = MaterialTheme.typography.titleSmall,
                                     color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
+                                    maxLines = 2,
                                     overflow = TextOverflow.Ellipsis,
                                 )
                                 val count = pluralStringResource(
@@ -208,8 +225,7 @@ fun ArtistScreen(
                             selected = track.uri.toString() == currentTrackUri,
                             onClick = { onPlay(track, section.tracks) },
                             onAddToPlaylist = { onAddToPlaylist(track) },
-                            onManageTags = { onManageTags(track) },
-                            onEditMetadata = { onEditMetadata(track) },
+                            onEdit = { action -> onEditSong(track, action) },
                             onCompress = { onCompress(track) },
                             onLike = { onLike(track) },
                             onDislike = { onDislike(track) },

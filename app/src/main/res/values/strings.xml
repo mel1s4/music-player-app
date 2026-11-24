@@ -72,7 +72,6 @@
     <string name="seek_song">Seek in song</string>
     <string name="action_love">Love</string>
     <string name="action_add_to_playlist">Add to playlist</string>
-    <string name="action_manage_tags">Manage tags</string>
     <string name="playlists">Playlists</string>
     <string name="playlists_empty">No playlists yet.</string>
     <string name="playlist_new">New playlist</string>
@@ -117,6 +116,9 @@
     <string name="action_save">Save</string>
     <string name="nav_menu">Menu</string>
     <string name="action_edit_song">Edit song</string>
+    <string name="action_edit_page">Edit page</string>
+    <string name="action_change_title">Change title</string>
+    <string name="action_edit_tags">Edit tags</string>
     <string name="edit_metadata_title">Song metadata</string>
     <string name="field_title">Title</string>
     <string name="field_artist">Artist</string>
@@ -149,6 +151,7 @@
 
     <!-- Bulk song selection -->
     <string name="bulk_clear">Clear selection</string>
+    <string name="bulk_start">Bulk selection</string>
     <string name="bulk_set_artist">Set artist</string>
     <string name="bulk_set_album">Set album</string>
     <string name="bulk_set_tags">Set tags</string>
@@ -231,14 +234,6 @@
     <string name="metadata_instant">Saved immediately</string>
     <string name="action_like">Like</string>
     <string name="action_dislike">Dislike</string>
-    <string name="ratings_most_liked">Most liked</string>
-    <string name="ratings_most_disliked">Most disliked</string>
-    <string name="ratings_none">Nothing rated yet.</string>
-    <string name="ratings_select">Select</string>
-    <string name="ratings_select_all">Select all</string>
-    <string name="ratings_reset">Reset score</string>
-    <string name="ratings_delete">Delete files</string>
-    <string name="ratings_delete_confirm">Delete %d files from the device? This cannot be undone.</string>
     <string name="action_go_to_folder">Go to folder</string>
     <string name="action_go_to_album">Go to album</string>
     <string name="action_go_to_artist">Go to artist</string>
@@ -278,7 +273,6 @@
     <string name="playlists_empty_body">Create a playlist to group songs the way you listen.</string>
     <string name="search_results">Results</string>
     <string name="tags_empty_hint">Tag a song from its ⋮ menu and the tag appears here, ready to play.</string>
-    <string name="recently_added">Recently added</string>
     <string name="settings_sync_files">Update audio files</string>
     <string name="settings_sync_files_desc">Write ratings, favourites and tags into each file’s metadata when they change</string>
     <string name="settings_notifications">Playback notifications</string>

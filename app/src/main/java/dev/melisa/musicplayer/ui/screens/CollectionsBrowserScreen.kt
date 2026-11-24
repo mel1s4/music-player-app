@@ -35,6 +35,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
@@ -111,6 +112,7 @@ fun CollectionsBrowserScreen(
     libraries: List<String>,
     artVersion: Int,
     starred: Set<String> = emptySet(),
+    onToggleStar: (String) -> Unit = {},
     onOpen: (String) -> Unit,
 ) {
     if (entries.isEmpty()) {
@@ -157,7 +159,13 @@ fun CollectionsBrowserScreen(
             kicker = stringResource(sort.labelRes()),
             accent = MaterialTheme.colorScheme.primary,
         ) { entry ->
-            ArtistItem(entry = entry, version = artVersion, onOpen = onOpen)
+            ArtistItem(
+                entry = entry,
+                version = artVersion,
+                starred = starred.contains(entry.name),
+                onToggleStar = { onToggleStar(entry.name) },
+                onOpen = onOpen,
+            )
         }
     } else {
         CollectionGrid(
@@ -174,6 +182,8 @@ fun CollectionsBrowserScreen(
                 entry = entry,
                 libraries = libraries,
                 artVersion = artVersion,
+                starred = starred.contains(entry.name),
+                onToggleStar = { onToggleStar(entry.name) },
                 onOpen = onOpen,
             )
         }
@@ -357,7 +367,8 @@ private fun AlbumItem(
     entry: CollectionEntry,
     libraries: List<String>,
     artVersion: Int,
-    starred: Set<String> = emptySet(),
+    starred: Boolean,
+    onToggleStar: () -> Unit,
     onOpen: (String) -> Unit,
 ) {
     Column(modifier = Modifier.cyberClick(onClick = { onOpen(entry.name) })) {
@@ -371,22 +382,31 @@ private fun AlbumItem(
                 .clip(RoundedCornerShape(16.dp)),
         )
         Spacer(Modifier.height(12.dp))
-        Text(
-            text = entry.name,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            text = listOfNotNull(entry.subtitle?.takeIf { it.isNotBlank() })
-                .plus(entry.count.toString())
-                .joinToString(" · "),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = entry.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = listOfNotNull(entry.subtitle?.takeIf { it.isNotBlank() })
+                        .plus(entry.count.toString())
+                        .joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            CollectionStarButton(
+                starred = starred,
+                accent = MaterialTheme.colorScheme.tertiary,
+                onToggle = onToggleStar,
+            )
+        }
     }
 }
 
@@ -394,6 +414,8 @@ private fun AlbumItem(
 private fun ArtistItem(
     entry: CollectionEntry,
     version: Int,
+    starred: Boolean,
+    onToggleStar: () -> Unit,
     onOpen: (String) -> Unit,
 ) {
     Column(
@@ -413,14 +435,49 @@ private fun ArtistItem(
             text = entry.name,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
         )
-        Text(
-            text = entry.count.toString(),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.primary,
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = entry.count.toString(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            CollectionStarButton(
+                starred = starred,
+                accent = MaterialTheme.colorScheme.primary,
+                onToggle = onToggleStar,
+            )
+        }
+    }
+}
+
+/**
+ * A card-sized star toggle. It sits inside the card's own click target, and Compose
+ * gives the inner clickable priority, so tapping the star never opens the collection.
+ */
+@Composable
+private fun CollectionStarButton(
+    starred: Boolean,
+    accent: Color,
+    onToggle: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onToggle),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = if (starred) Icons.Filled.Star else Icons.Filled.StarBorder,
+            contentDescription = stringResource(
+                if (starred) R.string.collections_unstar else R.string.collections_star,
+            ),
+            modifier = Modifier.size(20.dp),
+            tint = if (starred) accent else MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

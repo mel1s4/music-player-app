@@ -25,7 +25,7 @@ data class Track(
     val durationMs: Long,
     val folder: String,
     val year: String,
-    /** File modification time, used to seed "recently added" on the first scan. */
+    /** File modification time, used to seed first-seen stamps on the first scan. */
     val lastModifiedMs: Long = 0L,
     /** File size in bytes, for the library summary. 0 when the provider hides it. */
     val sizeBytes: Long = 0L,

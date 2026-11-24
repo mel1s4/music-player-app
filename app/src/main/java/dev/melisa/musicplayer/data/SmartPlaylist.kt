@@ -23,8 +23,8 @@ enum class SmartPlaylist {
     /**
      * Evaluates the list against the current library.
      *
-     * Liked and disliked lists lead with the strongest opinion, matching the dashboard;
-     * unheard songs are alphabetical so the list stays predictable while it shrinks.
+     * Liked and disliked lists lead with the strongest opinion; unheard songs are
+     * alphabetical so the list stays predictable while it shrinks.
      */
     fun resolveTracks(
         tracks: List<Track>,

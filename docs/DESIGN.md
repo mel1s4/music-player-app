@@ -196,31 +196,28 @@ that state is false; no decorative animation runs forever on a static screen.
   marked the song as disliked.
 
 **Dashboard**
-- The Dashboard is the browse hub: a 2 × 2 grid of **Songs, Files, Albums and Artists**
-  entries, each with its own accent and a large touch target. The library hero that
-  used to sit here now tops the Songs page, next to the tracks it describes.
-- **"Recently added" is the first list under the browse grid**: the five newest tracks
-  with cover tile, artist and a locale-aware relative stamp ("hace 40 min", "11 sept").
-  It is a preview, so the section carries no count badge.
+- The Dashboard opens with the **Your library** hero: song count, storage used, hours,
+  and the **Rescan** / **Free up space** actions. The summary sat at the top of Songs
+  before; it moved here so the state of the scan is the first thing on the home screen.
+- Below it is the browse hub: a 2 × 2 grid of **Songs, Files, Albums and Artists**
+  entries, each with its own accent and a large touch target.
 - The first time a track URI is seen it is stamped in `LibraryExtras.addedAt`, seeded
   with the file's own modification time when the provider exposes it, and persisted.
-  Rescans and tag edits never move an existing stamp; renames follow the file.
+  Rescans and tag edits never move an existing stamp; renames follow the file. Songs
+  orders by this stamp by default.
 - **No "Continue listening" card**: the mini player already carries the current track
-  and opens the full player, so a duplicate card above the lists would add nothing.
-- Top-rated and disliked lists now show rank + a tinted thumb, so the rating direction
-  is visible instead of a phrase.
-- **Most disliked** has a bulk-selection bar with select-all, reset score, compress and
-  delete. Compress opens the same batch compression sheet as the free-space flow, so
-  several disliked files can be shrunk without leaving the Dashboard.
+  and opens the full player, so a duplicate card above the grid would add nothing.
+- Ratings do not get list space here. "Recently added", "Most liked" and "Most
+  disliked" were removed; the per-song thumbs still set the weighted-shuffle score,
+  and the Liked / Disliked / No rating / Unheard smart playlists cover browsing by
+  rating.
 - Empty library becomes a real empty state with a route to Settings.
 
 **Songs**
-- The library hero is now the first thing here: song count, storage used, hours, and the
-  **Rescan** / **Free up space** actions. The Dashboard keeps its browse grid, while this
-  page shows the summary next to the actual list.
-- Count badge, **sort menu (date added / title / artist / duration)** defaulting to newest
-  added first, and shuffle-all. The three browse tiles moved to the Dashboard, so the
-  song list starts closer to the top.
+- The page starts directly with the sort/shuffle controls: count badge, **sort menu
+  (date added / title / artist / duration)** defaulting to newest added first, and
+  shuffle-all. The browse tiles live on the Dashboard and the library summary moved
+  there too, so the list stays close to the top.
 
 **Search**
 - Auto-focus, clear button, animated focus ring, result count, sectioned results with
@@ -306,11 +303,17 @@ that state is false; no decorative animation runs forever on a static screen.
   an artist stay put, and files already in the expected folder are skipped. Every move
   re-keys the database and the playback queue, so ratings, tags, favourites, listening
   history, playlist entries and the current playback position survive the new path.
-- Song rows share a `SongSelectionState` through a composition local. A long-press
-  starts a selection, later taps toggle rows, and a bottom bar shows the count plus
-  Set artist, Set album, Set tags, Add to playlist, Compress and Delete. Playlist and
-  smart-list rows opt into the same state, so long-press works everywhere a track is
-  listed.
+- Song rows share a `SongSelectionState` through a composition local. The **Bulk
+  selection** item in a row's kebab menu starts a selection with that song, later taps
+  toggle rows, and a bottom bar shows the count plus Set artist, Set album, Set tags,
+  Add to playlist, Compress and Delete. Playlist rows get their own single-item kebab
+  for the same entry, so selection works everywhere a track is listed.
+- The kebab menu's **Edit** entry opens a second page in place instead of leaving the
+  list: **Edit page** (the full metadata editor), **Change title**, **Set artist** and
+  **Set album** (the same one-field dialogs as bulk edits, seeded with the song's value;
+  artist and album offer the editor's autocomplete), and **Edit tags** (the song's tags
+  as checked pills plus the eight most-used library tags as one-tap pills). A back row
+  returns to the first page.
 - Bulk artist/album edits preserve every other tag. Non-playing files are rewritten
   immediately; the currently playing file goes through the deferred metadata queue.
   Tags are added to or removed from the whole selection, playlist additions are
@@ -345,12 +348,12 @@ that state is false; no decorative animation runs forever on a static screen.
 
 **Collections, playlists & tags**
 - Album and artist indices get section counters and real cover art; artists without a
-  portrait show a monogram disc.
-- Album and artist indices get section counters and real cover art; artists without a
-  portrait show a monogram disc. Their artwork editors carry a **star** toggle; starred
-  collections are removed from the alphabetical sections and pinned in a collapsible
-  **Starred** block above them, ordered by the archive's current sort. The block's
-  collapsed state is remembered on the screen.
+  portrait show a monogram disc. Names on the archive cards and album headers inside an
+  artist page wrap to two lines, so long titles are not cut after one. Their archive
+  cards, detail pages and artwork editors carry a **star** toggle; starred collections
+  are removed from the alphabetical sections and pinned in a collapsible **Starred**
+  block above them, ordered by the archive's current sort. The block's collapsed state
+  is remembered on the screen.
 - Playlists get a tinted "New playlist" action tile and real cards; empty playlists show
   a proper empty state.
 - **Smart lists** sit directly under that tile: Liked Songs (score above neutral),
@@ -416,7 +419,7 @@ Rewritten:
 
 Unchanged: playback service, ID3 reader/writer, playlist resolution. The scanner now
 also reports each file's modification time and size; `LibraryExtras` persists first-seen
-stamps for the Recently added section and now writes through SQLite.
+stamps that order Songs by date added, and now writes through SQLite.
 
 ---
 
@@ -434,7 +437,7 @@ Library data lives in its own SQLite database, `library.db`, through
 | `tags` | `(uri, tag)` pairs |
 | `playlists` | playlist id, name, optional dynamic tag rule |
 | `playlist_tracks` | ordered URIs per playlist |
-| `tracks` | first-seen timestamp per URI ("Recently added") |
+| `tracks` | first-seen timestamp per URI (Songs' date-added order) |
 | `listens` | play count and last-played timestamp per URI ("Unheard songs") |
 | `pending_meta` | metadata edits waiting for their track to stop playing |
 | `album_orders` | user-defined track order per album name |

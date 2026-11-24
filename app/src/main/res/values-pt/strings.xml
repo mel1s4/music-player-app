@@ -67,7 +67,6 @@
     <string name="seek_song">Navegar na música</string>
     <string name="action_love">Favorito</string>
     <string name="action_add_to_playlist">Adicionar à playlist</string>
-    <string name="action_manage_tags">Gerenciar etiquetas</string>
     <string name="playlists">Playlists</string>
     <string name="playlists_empty">Nenhuma playlist ainda.</string>
     <string name="playlist_new">Nova playlist</string>
@@ -101,6 +100,9 @@
     <string name="action_save">Salvar</string>
     <string name="nav_menu">Menu</string>
     <string name="action_edit_song">Editar música</string>
+    <string name="action_edit_page">Página de edição</string>
+    <string name="action_change_title">Alterar título</string>
+    <string name="action_edit_tags">Editar etiquetas</string>
     <string name="edit_metadata_title">Metadados</string>
     <string name="field_title">Título</string>
     <string name="field_artist">Artista</string>
@@ -132,6 +134,7 @@
     <string name="files_up">Subir um nível</string>
     <!-- Bulk song selection -->
     <string name="bulk_clear">Limpar seleção</string>
+    <string name="bulk_start">Seleção múltipla</string>
     <string name="bulk_set_artist">Definir artista</string>
     <string name="bulk_set_album">Definir álbum</string>
     <string name="bulk_set_tags">Definir etiquetas</string>
@@ -224,14 +227,6 @@
     <string name="metadata_instant">Salvo na hora</string>
     <string name="action_like">Curtir</string>
     <string name="action_dislike">Não curtir</string>
-    <string name="ratings_most_liked">Mais curtidas</string>
-    <string name="ratings_most_disliked">Menos curtidas</string>
-    <string name="ratings_none">Nada avaliado ainda.</string>
-    <string name="ratings_select">Selecionar</string>
-    <string name="ratings_select_all">Selecionar tudo</string>
-    <string name="ratings_reset">Redefinir pontuação</string>
-    <string name="ratings_delete">Excluir arquivos</string>
-    <string name="ratings_delete_confirm">Excluir %d arquivos do dispositivo? Não pode ser desfeito.</string>
     <string name="action_go_to_folder">Ir para a pasta</string>
     <string name="action_go_to_album">Ir para o álbum</string>
     <string name="action_go_to_artist">Ir para o artista</string>
@@ -280,7 +275,6 @@
     <string name="smart_disliked_empty">Nenhuma música não curtida ainda. Toque no polegar para baixo de uma música para vê-la aqui.</string>
     <string name="smart_no_rating_empty">Todas as músicas têm avaliação.</string>
     <string name="smart_unheard_empty">Você já ouviu todas as músicas da sua biblioteca.</string>
-    <string name="recently_added">Adicionado recentemente</string>
     <string name="settings_sync_files">Atualizar arquivos de áudio</string>
     <string name="settings_sync_files_desc">Grava avaliações, favoritos e etiquetas nos metadados do arquivo quando mudam</string>
     <string name="settings_notifications">Notificações de reprodução</string>

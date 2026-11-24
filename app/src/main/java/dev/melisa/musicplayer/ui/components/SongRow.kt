@@ -29,8 +29,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -55,8 +53,7 @@ fun SongRow(
     selected: Boolean,
     onClick: () -> Unit,
     onAddToPlaylist: () -> Unit,
-    onManageTags: () -> Unit,
-    onEditMetadata: () -> Unit,
+    onEdit: (SongEditAction) -> Unit,
     onLike: () -> Unit,
     onDislike: () -> Unit,
     onCompress: (() -> Unit)? = null,
@@ -70,7 +67,12 @@ fun SongRow(
     val selection = LocalSongSelection.current
     val selecting = selection?.active == true
     val bulkSelected = selection?.isSelected(track.uri.toString()) == true
-    val haptics = LocalHapticFeedback.current
+
+    // Selection mode starts from the kebab menu, with this row as the first pick;
+    // tapping rows then toggles membership.
+    val onStartBulkSelection: (() -> Unit)? = selection?.let { state ->
+        { state.start(track) }
+    }
 
     val background by animateColorAsState(
         targetValue = if (selected || bulkSelected) {
@@ -132,12 +134,6 @@ fun SongRow(
                 .cyberClick(
                     onClick = {
                         if (selecting) selection?.toggle(track) else onClick()
-                    },
-                    onLongClick = {
-                        if (selection != null) {
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            if (selecting) selection.toggle(track) else selection.start(track)
-                        }
                     },
                 ),
             verticalAlignment = Alignment.CenterVertically,
@@ -214,12 +210,12 @@ fun SongRow(
                     expanded = menuOpen,
                     onDismiss = { menuOpen = false },
                     onAddToPlaylist = onAddToPlaylist,
-                    onManageTags = onManageTags,
-                    onEditMetadata = onEditMetadata,
+                    onEdit = onEdit,
                     onLike = onLike,
                     onDislike = onDislike,
                     onCompress = onCompress,
                     onDelete = onDelete,
+                    onStartBulkSelection = onStartBulkSelection,
                 )
             }
         }

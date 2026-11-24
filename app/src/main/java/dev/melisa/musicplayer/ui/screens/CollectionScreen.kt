@@ -16,6 +16,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,6 +36,7 @@ import dev.melisa.musicplayer.R
 import dev.melisa.musicplayer.data.Track
 import dev.melisa.musicplayer.ui.components.ReorderableTrackList
 import dev.melisa.musicplayer.ui.components.SectionKicker
+import dev.melisa.musicplayer.ui.components.SongEditAction
 import dev.melisa.musicplayer.ui.components.SongRow
 
 /**
@@ -52,13 +55,14 @@ fun CollectionScreen(
     onPlay: (Track, List<Track>) -> Unit,
     onPlayAll: (List<Track>, Boolean) -> Unit,
     onAddToPlaylist: (Track) -> Unit,
-    onManageTags: (Track) -> Unit,
-    onEditMetadata: (Track) -> Unit,
+    onEditSong: (Track, SongEditAction) -> Unit,
     onCompress: (Track) -> Unit,
     onLike: (Track) -> Unit,
     onDislike: (Track) -> Unit,
     onDelete: (Track) -> Unit,
     onEdit: () -> Unit,
+    isStarred: Boolean = false,
+    onToggleStar: () -> Unit = {},
     onReorder: ((List<Track>) -> Unit)? = null,
 ) {
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -91,6 +95,19 @@ fun CollectionScreen(
                         text = pluralStringResource(R.plurals.song_count, tracks.size, tracks.size),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = onToggleStar) {
+                    Icon(
+                        imageVector = if (isStarred) Icons.Filled.Star else Icons.Filled.StarBorder,
+                        contentDescription = stringResource(
+                            if (isStarred) R.string.collections_unstar else R.string.collections_star,
+                        ),
+                        tint = if (isStarred) {
+                            MaterialTheme.colorScheme.tertiary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                     )
                 }
                 IconButton(onClick = onEdit) {
@@ -153,8 +170,7 @@ fun CollectionScreen(
                     selected = track.uri.toString() == currentTrackUri,
                     onClick = { onPlay(track, tracks) },
                     onAddToPlaylist = { onAddToPlaylist(track) },
-                    onManageTags = { onManageTags(track) },
-                    onEditMetadata = { onEditMetadata(track) },
+                    onEdit = { action -> onEditSong(track, action) },
                     onCompress = { onCompress(track) },
                     onLike = { onLike(track) },
                     onDislike = { onDislike(track) },

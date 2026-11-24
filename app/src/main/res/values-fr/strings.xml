@@ -67,7 +67,6 @@
     <string name="seek_song">Se déplacer dans le morceau</string>
     <string name="action_love">Favori</string>
     <string name="action_add_to_playlist">Ajouter à une playlist</string>
-    <string name="action_manage_tags">Gérer les étiquettes</string>
     <string name="playlists">Playlists</string>
     <string name="playlists_empty">Aucune playlist pour l\'instant.</string>
     <string name="playlist_new">Nouvelle playlist</string>
@@ -101,6 +100,9 @@
     <string name="action_save">Enregistrer</string>
     <string name="nav_menu">Menu</string>
     <string name="action_edit_song">Modifier le morceau</string>
+    <string name="action_edit_page">Page d’édition</string>
+    <string name="action_change_title">Changer le titre</string>
+    <string name="action_edit_tags">Modifier les étiquettes</string>
     <string name="edit_metadata_title">Métadonnées</string>
     <string name="field_title">Titre</string>
     <string name="field_artist">Artiste</string>
@@ -132,6 +134,7 @@
     <string name="files_up">Remonter d\'un niveau</string>
     <!-- Bulk song selection -->
     <string name="bulk_clear">Effacer la sélection</string>
+    <string name="bulk_start">Sélection groupée</string>
     <string name="bulk_set_artist">Définir l’artiste</string>
     <string name="bulk_set_album">Définir l’album</string>
     <string name="bulk_set_tags">Définir les étiquettes</string>
@@ -224,14 +227,6 @@
     <string name="metadata_instant">Enregistré immédiatement</string>
     <string name="action_like">J\'aime</string>
     <string name="action_dislike">Je n\'aime pas</string>
-    <string name="ratings_most_liked">Les plus aimés</string>
-    <string name="ratings_most_disliked">Les moins aimés</string>
-    <string name="ratings_none">Rien de noté pour l\'instant.</string>
-    <string name="ratings_select">Sélectionner</string>
-    <string name="ratings_select_all">Tout sélectionner</string>
-    <string name="ratings_reset">Réinitialiser le score</string>
-    <string name="ratings_delete">Supprimer les fichiers</string>
-    <string name="ratings_delete_confirm">Supprimer %d fichiers de l\'appareil ? Action irréversible.</string>
     <string name="action_go_to_folder">Aller au dossier</string>
     <string name="action_go_to_album">Aller à l\'album</string>
     <string name="action_go_to_artist">Aller à l\'artiste</string>
@@ -280,7 +275,6 @@
     <string name="smart_disliked_empty">Aucun morceau détesté pour l’instant. Touchez le pouce vers le bas d’un morceau pour le voir ici.</string>
     <string name="smart_no_rating_empty">Tous les morceaux ont une note.</string>
     <string name="smart_unheard_empty">Vous avez écouté tous les morceaux de votre bibliothèque.</string>
-    <string name="recently_added">Ajouté récemment</string>
     <string name="settings_sync_files">Mettre à jour les fichiers audio</string>
     <string name="settings_sync_files_desc">Écrit les notes, favoris et étiquettes dans les métadonnées du fichier lorsqu’ils changent</string>
     <string name="settings_notifications">Notifications de lecture</string>

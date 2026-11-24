@@ -67,7 +67,6 @@
     <string name="seek_song">Buscar en la canción</string>
     <string name="action_love">Favorito</string>
     <string name="action_add_to_playlist">Añadir a lista</string>
-    <string name="action_manage_tags">Gestionar etiquetas</string>
     <string name="playlists">Listas</string>
     <string name="playlists_empty">Aún no hay listas.</string>
     <string name="playlist_new">Nueva lista</string>
@@ -101,6 +100,9 @@
     <string name="action_save">Guardar</string>
     <string name="nav_menu">Menú</string>
     <string name="action_edit_song">Editar canción</string>
+    <string name="action_edit_page">Página de edición</string>
+    <string name="action_change_title">Cambiar título</string>
+    <string name="action_edit_tags">Editar etiquetas</string>
     <string name="edit_metadata_title">Metadatos</string>
     <string name="field_title">Título</string>
     <string name="field_artist">Artista</string>
@@ -132,6 +134,7 @@
     <string name="files_up">Subir un nivel</string>
     <!-- Bulk song selection -->
     <string name="bulk_clear">Quitar selección</string>
+    <string name="bulk_start">Selección múltiple</string>
     <string name="bulk_set_artist">Definir artista</string>
     <string name="bulk_set_album">Definir álbum</string>
     <string name="bulk_set_tags">Definir etiquetas</string>
@@ -224,14 +227,6 @@
     <string name="metadata_instant">Se guarda al instante</string>
     <string name="action_like">Me gusta</string>
     <string name="action_dislike">No me gusta</string>
-    <string name="ratings_most_liked">Más gustadas</string>
-    <string name="ratings_most_disliked">Menos gustadas</string>
-    <string name="ratings_none">Nada valorado todavía.</string>
-    <string name="ratings_select">Seleccionar</string>
-    <string name="ratings_select_all">Seleccionar todo</string>
-    <string name="ratings_reset">Restablecer puntuación</string>
-    <string name="ratings_delete">Eliminar archivos</string>
-    <string name="ratings_delete_confirm">¿Eliminar %d archivos del dispositivo? No se puede deshacer.</string>
     <string name="action_go_to_folder">Ir a la carpeta</string>
     <string name="action_go_to_album">Ir al álbum</string>
     <string name="action_go_to_artist">Ir al artista</string>
@@ -280,7 +275,6 @@
     <string name="smart_disliked_empty">Aún no has descartado ninguna. Pulsa el pulgar abajo en una canción y aparecerá aquí.</string>
     <string name="smart_no_rating_empty">Todas las canciones tienen valoración.</string>
     <string name="smart_unheard_empty">Ya has escuchado todas las canciones de tu biblioteca.</string>
-    <string name="recently_added">Añadido recientemente</string>
     <string name="settings_sync_files">Actualizar archivos de audio</string>
     <string name="settings_sync_files_desc">Escribe valoraciones, favoritos y etiquetas en los metadatos del archivo cuando cambian</string>
     <string name="settings_notifications">Notificaciones de reproducción</string>
