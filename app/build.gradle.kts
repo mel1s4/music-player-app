@@ -98,7 +98,7 @@ dependencies {
     implementation("androidx.media3:media3-session:1.11.1")
     // Reads and writes ID3 / Vorbis / MP4 tags.
     implementation("net.jthink:jaudiotagger:3.0.1")
-    implementation("androidx.documentfile:documentfile:1.0.1")
+    implementation("androidx.documentfile:documentfile:1.1.0")
 
     // Per-app language (AppCompatDelegate.setApplicationLocales) + AppCompat themes.
     implementation("androidx.appcompat:appcompat:1.7.1")
