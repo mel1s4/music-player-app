@@ -60,7 +60,8 @@ private fun parseYear(raw: String): Int? =
  * An artist's discography, split by album and ordered chronologically.
  *
  * Albums without a year sort last, alphabetically — better than pretending they are
- * the oldest. Tapping a track queues its album, which is what the section implies.
+ * the oldest. Tapping a track starts a run through the whole page: the artist's songs
+ * in page order, then the rest of the library shuffled.
  */
 @Composable
 fun ArtistScreen(
@@ -96,6 +97,9 @@ fun ArtistScreen(
                 compareBy({ it.year ?: Int.MAX_VALUE }, { it.album.orEmpty().lowercase() }),
             )
     }
+    // What "the next song in the artist page" means: the same order the sections are
+    // drawn in, flattened into one queue.
+    val pageTracks = remember(sections) { sections.flatMap { it.tracks } }
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
@@ -225,7 +229,7 @@ fun ArtistScreen(
                         SongRow(
                             track = track,
                             selected = track.uri.toString() == currentTrackUri,
-                            onClick = { onPlay(track, section.tracks) },
+                            onClick = { onPlay(track, pageTracks) },
                             onAddToPlaylist = { onAddToPlaylist(track) },
                             onEdit = { action -> onEditSong(track, action) },
                             onGoTo = { action -> onGoToSong(track, action) },

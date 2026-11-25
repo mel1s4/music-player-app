@@ -74,6 +74,9 @@ fun SongRow(
     val onStartBulkSelection: (() -> Unit)? = selection?.let { state ->
         { state.start(track) }
     }
+    // Pressing and holding the row opens the same menu as its kebab. Selection mode
+    // draws a checkbox where the kebab would be, so there is no menu to open then.
+    val onRowLongClick: (() -> Unit)? = if (selecting) null else { { menuOpen = true } }
 
     val background by animateColorAsState(
         targetValue = if (selected || bulkSelected) {
@@ -133,6 +136,7 @@ fun SongRow(
                 .weight(1f)
                 .heightIn(min = 58.dp)
                 .cyberClick(
+                    onLongClick = onRowLongClick,
                     onClick = {
                         if (selecting) selection?.toggle(track) else onClick()
                     },

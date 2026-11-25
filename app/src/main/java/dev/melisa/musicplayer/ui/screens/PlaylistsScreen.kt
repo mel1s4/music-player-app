@@ -917,6 +917,8 @@ private fun PlaylistTrackRow(
     val bulkSelected = selection?.isSelected(track.uri.toString()) == true
     val highlighted = selected || bulkSelected
     var menuOpen by remember { mutableStateOf(false) }
+    // Same gesture as the shared song row: hold the row to reach the kebab menu.
+    val onRowLongClick: (() -> Unit)? = if (selecting) null else { { menuOpen = true } }
 
     Row(
         modifier = Modifier
@@ -963,6 +965,7 @@ private fun PlaylistTrackRow(
                 .weight(1f)
                 .heightIn(min = 60.dp)
                 .cyberClick(
+                    onLongClick = onRowLongClick,
                     onClick = {
                         if (selecting) selection?.toggle(track) else onClick()
                     },

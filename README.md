@@ -21,7 +21,7 @@ account, no upload, no network permission.
 - **Android 8.0 (API 26) or newer.**
 - The release page includes a **SHA-256 checksum**; verify it before installing.
 - GitHub Releases is the official distribution channel; the latest version is
-  [v0.7.2](https://github.com/mel1s4/music-player-app/releases/tag/v0.7.2).
+  [v0.7.3](https://github.com/mel1s4/music-player-app/releases/tag/v0.7.3).
 - Prefer to build it yourself? See [Build and run](#build-and-run).
 - Already have a debug/test build installed? Uninstall it first — Android will not
   update across different signing keys.
@@ -81,6 +81,8 @@ notes, palette, contrast measurements and motion inventory are in
 - **Bulk selection** from any song row's kebab menu: set the artist or album, add or
   remove tags, add the whole selection to a playlist, or compress/delete it after
   confirmation.
+- **Press and hold a song** in any list to open that row's kebab menu, so its actions
+  are one gesture away without aiming for the three-dot button.
 - **Quick edits** from that same kebab menu: its **Edit** submenu opens the full editor,
   changes the title, sets the artist or album with the editor's autocomplete, or toggles
   tags as checked pills without leaving the list. Its **Go to** submenu jumps to the
@@ -93,6 +95,9 @@ notes, palette, contrast measurements and motion inventory are in
   Tapping either opens the app. Android 13+ asks for notification permission once on
   first launch; **Settings → Playback notifications** reopens the system page later.
 - Queue playback, next/previous, seek and shuffle.
+- **Collection page runs**: tapping a song on an artist, album or playlist page plays
+  that page in order from the song, wraps around to the rest of its songs, and then
+  keeps going through the rest of the library shuffled.
 - **Weighted shuffle** that uses signed ratings: liked tracks are more likely, disliked
   ones less likely.
 - Pause when headphones are unplugged and proper audio-focus handling.

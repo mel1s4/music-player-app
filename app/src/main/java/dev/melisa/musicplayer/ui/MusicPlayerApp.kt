@@ -366,6 +366,25 @@ fun MusicPlayerApp(settings: AppSettings) {
         player.play()
     }
 
+    /**
+     * Plays a song from a collection page (artist, album or playlist) as the start of a
+     * run through that page: its songs in page order, wrapping around from the tapped
+     * one, then the rest of the library in weighted-random order. The page therefore
+     * plays out in full before the queue turns into a shuffle, and playback does not
+     * stop just because the last song on the page ended.
+     */
+    fun playPage(track: Track, pageTracks: List<Track>) {
+        val start = pageTracks.indexOfFirst { it.uri == track.uri }.coerceAtLeast(0)
+        // Tapping a song halfway down a page still plays the ones above it before the
+        // run is over; that is the "cycle them all" half of the request.
+        val pageRun = pageTracks.drop(start) + pageTracks.take(start)
+        val pageIds = pageRun.mapTo(HashSet()) { it.uri.toString() }
+        val rest = weightedShuffle(
+            tracks.orEmpty().filter { it.uri.toString() !in pageIds },
+        ) { extras.rating(it.uri.toString()) }
+        play(track, pageRun + rest, shuffle = false)
+    }
+
     /** Re-shuffles what is left of the queue around the song that is playing now. */
     fun reshuffleRemaining() {
         val player = controller ?: return
@@ -1504,7 +1523,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                             extras = extras,
                             tracks = tracks,
                             currentTrackUri = nowPlaying?.uri?.toString(),
-                            onPlayTrack = { track, queue -> play(track, queue) },
+                            onPlayTrack = { track, pageTracks -> playPage(track, pageTracks) },
                             onPlayAll = { queue, shuffle -> play(queue.first(), queue, shuffle) },
                         )
                         Destination.Settings -> SettingsScreen(
@@ -1531,7 +1550,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                         tracks = albumTracks,
                         currentTrackUri = nowPlaying?.uri?.toString(),
                         onBack = { openAlbum = null },
-                        onPlay = { track, queue -> play(track, queue) },
+                        onPlay = { track, pageTracks -> playPage(track, pageTracks) },
                         onPlayAll = { queue, shuffle -> if (queue.isNotEmpty()) play(queue.first(), queue, shuffle) },
                         onAddToPlaylist = { openAddToPlaylist(it) },
                         onEditSong = { track, action -> editSong(track, action) },
@@ -1563,7 +1582,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                         tracks = artistTracks,
                         currentTrackUri = nowPlaying?.uri?.toString(),
                         onBack = { openArtist = null },
-                        onPlay = { track, queue -> play(track, queue) },
+                        onPlay = { track, pageTracks -> playPage(track, pageTracks) },
                         onPlayAll = { queue, shuffle -> if (queue.isNotEmpty()) play(queue.first(), queue, shuffle) },
                         onAddToPlaylist = { openAddToPlaylist(it) },
                         onEditSong = { track, action -> editSong(track, action) },
