@@ -101,5 +101,5 @@ dependencies {
     implementation("androidx.documentfile:documentfile:1.0.1")
 
     // Per-app language (AppCompatDelegate.setApplicationLocales) + AppCompat themes.
-    implementation("androidx.appcompat:appcompat:1.7.1")
+    implementation("androidx.appcompat:appcompat:1.8.0")
 }
