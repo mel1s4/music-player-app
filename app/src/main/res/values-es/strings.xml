@@ -387,6 +387,9 @@
     </plurals>
 <string name="compress_done_cancelled_zero">Detenido antes de terminar.</string>
     <string name="compress_done_kept_copy">La copia comprimida se guardó junto al original.</string>
+    <string name="compress_notification_title">Comprimiendo audio</string>
+    <string name="compress_channel_name">Compresión de audio</string>
+    <string name="compress_channel_description">Progreso mientras se recodifican canciones en segundo plano.</string>
 
     <!-- Icono de la aplicación -->
     <string name="settings_app_icon">Icono de la aplicación</string>

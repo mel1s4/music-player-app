@@ -21,7 +21,7 @@ account, no upload, no network permission.
 - **Android 8.0 (API 26) or newer.**
 - The release page includes a **SHA-256 checksum**; verify it before installing.
 - GitHub Releases is the official distribution channel; the latest version is
-  [v0.7.1](https://github.com/mel1s4/music-player-app/releases/tag/v0.7.1).
+  [v0.7.2](https://github.com/mel1s4/music-player-app/releases/tag/v0.7.2).
 - Prefer to build it yourself? See [Build and run](#build-and-run).
 - Already have a debug/test build installed? Uninstall it first — Android will not
   update across different signing keys.
@@ -61,7 +61,8 @@ notes, palette, contrast measurements and motion inventory are in
   pages that open inside the tab (playback controls stay visible).
 - **Star albums and artists** from their archive cards, detail pages or artwork
   editors; starred collections appear in a collapsible **Starred** section at the top
-  of their archive.
+  of their archive and also stay in their normal alphabetical section, so pinning one
+  never hides it from the archive.
 - **Albums and manual playlists** can be reordered by dragging the handle beside each
   track number. Album order is remembered; smart and dynamic lists remain read-only.
 - **Albums, Artists and Files** share the Songs ordering menu (date added, title,
@@ -119,6 +120,11 @@ notes, palette, contrast measurements and motion inventory are in
 - Pulling down at the top of the song editor goes back, matching its top-left arrow.
 - Read and write real tags — ID3v2, Vorbis comments, MP4 atoms — through
   [jaudiotagger](https://github.com/jthink/jaudiotagger).
+- **Artist images from the library**: an `artist.jpg` in an artist's folder is imported
+  by every scan and appears on the artist's archive card, in the artwork editor and as
+  the fallback cover in the player. Folder names are matched to tag names ignoring case,
+  accents, punctuation and Unicode form, so a macOS-created library still resolves its
+  portraits. An image picked in the artist editor overrides the folder one.
 - Optional **write-through**: ratings, favourites and app tags can be mirrored into the
   audio file's own metadata, so they survive a reinstall and travel to other players.
 - Rename files, edit title/artist/album/year/track/disc/genre/comment, and manage
@@ -131,7 +137,9 @@ notes, palette, contrast measurements and motion inventory are in
   bitrates, then keep the version that sounds right. The chosen bitrate is saved as the
   full song.
 - **Free up space** by transcoding tracks to AAC, with the option to replace the
-  original or keep both.
+  original or keep both. Compression runs as a foreground job: leaving the app, turning
+  the screen off or rotating the phone does not interrupt it, and the notification shows
+  progress and offers **Stop**.
 
 ### Interface
 
@@ -239,6 +247,7 @@ music-player-app/
 ├── app/
 │   ├── src/main/java/dev/melisa/musicplayer/
 │   │   ├── MainActivity.kt
+│   │   ├── compression/   # background compression queue and its foreground service
 │   │   ├── data/          # SAF scanning, SQLite, tags, artwork, compression
 │   │   ├── playback/      # MediaSessionService and playback ownership
 │   │   └── ui/            # Compose shell, screens, components, theme

@@ -261,11 +261,15 @@ that state is false; no decorative animation runs forever on a static screen.
 **Cover art**
 - Every song surface (list row, recent list, mini player, full player) resolves its
   image the same way: **album cover → artist portrait → music glyph**. Covers come from
-  `cover.jpg` beside the tracks or embedded artwork; artists fall back to the portrait
-  saved from the artist editor.
+  `cover.jpg` beside the tracks or embedded artwork. Artist portraits come from an
+  `artist.jpg` beside the artist's folders: the scanner copies each one into app
+  storage, keyed to the artist tag whose name matches the folder after case, accent,
+  punctuation and Unicode-form differences. A portrait picked in the artist editor is
+  stored separately and wins over the imported sidecar.
 - Decoding is sampled (192px for rows, 640px for the player) and cached per album folder
   / artist, so a 20-song album decodes its cover once. A missing-art result is cached
-  too, and the cache is invalidated when artwork is edited so open lists refresh.
+  too, and the cache is invalidated when artwork is edited or a scan imports an artist
+  sidecar, so open lists refresh instead of keeping a monogram.
 - Settings → "Show album art" disables the whole lookup and shows the music glyph,
   which is also the cheapest mode on slow devices.
 
@@ -351,9 +355,10 @@ that state is false; no decorative animation runs forever on a static screen.
   portrait show a monogram disc. Names on the archive cards and album headers inside an
   artist page wrap to two lines, so long titles are not cut after one. Their archive
   cards, detail pages and artwork editors carry a **star** toggle; starred collections
-  are removed from the alphabetical sections and pinned in a collapsible **Starred**
-  block above them, ordered by the archive's current sort. The block's collapsed state
-  is remembered on the screen.
+  are pinned in a collapsible **Starred** block above the alphabetical sections,
+  ordered by the archive's current sort, and also stay in their normal section — a
+  pinned collection appears twice on purpose, with the filled star marking the copy in
+  the archive. The block's collapsed state is remembered on the screen.
 - Playlists get a tinted "New playlist" action tile and real cards; empty playlists show
   a proper empty state.
 - **Smart lists** sit directly under that tile: Liked Songs (score above neutral),
@@ -569,6 +574,27 @@ Lossy → lossy is generation loss, and the sheet says so in plain language. Los
 sources (FLAC/WAV) get the opposite note: a large saving for very little audible
 difference. "Keep original" defaults to on; the original is only removed when it is off.
 
+### Running in the background
+
+The queue is not owned by the sheet. `CompressionRunner` holds it in a process-wide
+`StateFlow`, and `CompressService` keeps it alive as a foreground job — `dataSync` below
+Android 15, `mediaProcessing` on 15 and later — with a progress notification, a
+**Stop** action and a partial wake lock. Sending the app to the background no longer
+parks the conversion: Android treats the process like playback, and the notification
+names the track being encoded.
+
+The sheet renders that state instead of its own copy. When the activity is recreated
+mid-run, whether by rotation or after Android reclaimed the UI, it adopts the live job
+rather than forgetting it. A rotation also replaces the `LibraryExtras` instance the run
+rekeys, so `attach` replays the swaps that already happened; without it the new
+instance's favourites, ratings, tags and playlists would still be keyed by the old URIs.
+A finished run leaves a summary notification that opens the app on the same summary.
+
+Replacing a file under a live player is handled on both sides. `PlaybackService`
+observes the job's swaps and re-points its own queue even when no activity exists, so
+background playback never tries to reopen a URI the conversion just deleted; the app
+additionally re-points the visible player and the open editor.
+
 ### Data behaviour
 
 - **Replaced track**: the new document URI takes over every table keyed by URI —
@@ -584,12 +610,12 @@ difference. "Keep original" defaults to on; the original is only removed when it
 
 - AAC in MP4 only. Opus/OGG decoding depends on the platform (API 29+ for Opus in Ogg);
   unsupported containers fail with a readable message rather than a crash.
-- The queue runs in the app process with a progress dialog. It survives navigation but
-  not process death; a WorkManager/foreground-service version would be the next step for
-  hour-long batch jobs.
+- The run survives backgrounding and activity recreation, but not process death or a
+  force-stop: the queue lives in memory. A WorkManager version that persists the queue
+  would be the next step for a reboot mid-batch.
 - Conversion is CPU-bound: roughly realtime to a few times faster depending on the
-  source codec and the device. A five-minute track is a one-off wait, not a background
-  service.
+  source codec and the device. A five-minute track is a short one-off wait; a whole
+  library is long enough that the foreground service and wake lock matter.
 
 ---
 

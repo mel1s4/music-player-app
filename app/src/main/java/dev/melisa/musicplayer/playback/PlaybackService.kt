@@ -2,12 +2,22 @@ package dev.melisa.musicplayer.playback
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.util.Log
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import dev.melisa.musicplayer.MainActivity
+import dev.melisa.musicplayer.compression.CompressSwap
+import dev.melisa.musicplayer.compression.CompressionRunner
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 /**
  * Owns the player for the whole app.
@@ -21,6 +31,7 @@ import dev.melisa.musicplayer.MainActivity
 class PlaybackService : MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     override fun onCreate() {
         super.onCreate()
@@ -52,6 +63,41 @@ class PlaybackService : MediaSessionService() {
         mediaSession = MediaSession.Builder(this, player)
             .setSessionActivity(openApp)
             .build()
+
+        // Compression can replace a file while the activity is gone. If that file is
+        // in the queue, point the item at the new document before the player tries to
+        // reopen a URI the conversion just deleted.
+        serviceScope.launch {
+            CompressionRunner.state
+                .map { it.swaps }
+                .distinctUntilChanged()
+                .collect { swaps -> swaps.forEach(::adoptCompressedFile) }
+        }
+    }
+
+    private fun adoptCompressedFile(swap: CompressSwap) {
+        val player = mediaSession?.player ?: return
+        val oldId = swap.track.uri.toString()
+        for (index in 0 until player.mediaItemCount) {
+            val item = player.getMediaItemAt(index)
+            if (item.mediaId != oldId) continue
+            val current = index == player.currentMediaItemIndex
+            val position = if (current) player.currentPosition else 0L
+            val wasPlaying = player.isPlaying
+            runCatching {
+                player.replaceMediaItem(
+                    index,
+                    item.buildUpon()
+                        .setUri(swap.newUri)
+                        .setMediaId(swap.newUri.toString())
+                        .build(),
+                )
+                if (current) {
+                    player.seekTo(index, position)
+                    if (wasPlaying) player.play()
+                }
+            }.onFailure { Log.w(TAG, "could not adopt compressed file", it) }
+        }
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
@@ -69,11 +115,16 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        serviceScope.cancel()
         mediaSession?.run {
             player.release()
             release()
         }
         mediaSession = null
         super.onDestroy()
+    }
+
+    private companion object {
+        const val TAG = "PlaybackService"
     }
 }

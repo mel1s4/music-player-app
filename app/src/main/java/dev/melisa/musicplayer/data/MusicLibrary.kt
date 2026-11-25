@@ -15,6 +15,8 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import java.text.Normalizer
+import java.util.Locale
 import kotlin.coroutines.coroutineContext
 
 data class Track(
@@ -31,7 +33,43 @@ data class Track(
     val sizeBytes: Long = 0L,
 )
 
+/** What a scan found: the songs, plus the `artist.jpg` sidecars beside them. */
+data class LibraryScan(
+    val tracks: List<Track>,
+    /** Sidecars keyed by the artist tag their folder name resolves to. */
+    val artistImages: Map<String, ArtistImage>,
+)
+
 private val AUDIO_EXTENSIONS = setOf("mp3", "m4a", "aac", "flac", "ogg", "opus", "wav", "wma")
+
+/** Sidecar files that act as the portrait of the folder they sit in. */
+private val ARTIST_IMAGE_NAMES = setOf("artist.jpg", "artist.jpeg", "artist.png", "artist.webp")
+
+private val COMBINING_MARKS = Regex("\\p{M}+")
+private val NON_LETTER_OR_DIGIT = Regex("[^\\p{L}\\p{N}]+")
+private val WHITESPACE = Regex("\\s+")
+
+/**
+ * How a folder name and a tag artist name are compared.
+ *
+ * macOS often stores accents decomposed (NFD) while tags are composed (NFC), folder
+ * names carry different case and punctuation than tags ("Tobias Jesso Jr" vs
+ * "Tobias Jesso Jr."), and the same name can use dashes of different widths. Reducing
+ * both sides to lower-case letters and digits bridges those without matching two
+ * genuinely different names.
+ */
+private fun artistImageKey(name: String): String? {
+    val key = Normalizer.normalize(name.trim(), Normalizer.Form.NFKD)
+        .replace(COMBINING_MARKS, "")
+        .lowercase(Locale.ROOT)
+        .replace(NON_LETTER_OR_DIGIT, " ")
+        .trim()
+        .replace(WHITESPACE, " ")
+    return key.takeIf { it.isNotEmpty() }
+}
+
+private fun isArtistImageName(name: String): Boolean =
+    name.lowercase(Locale.ROOT) in ARTIST_IMAGE_NAMES
 
 /** Containers that can actually carry an ID3v2 tag; others would just waste an open. */
 private val ID3_EXTENSIONS = setOf("mp3", "wav", "aif", "aiff", "ape", "wv")
@@ -68,15 +106,18 @@ object MusicLibrary {
         context: Context,
         libraries: List<String>,
         cache: TrackMetaCache? = null,
-    ): List<Track> = withContext(Dispatchers.IO) {
-        if (libraries.isEmpty()) return@withContext emptyList()
+    ): LibraryScan = withContext(Dispatchers.IO) {
+        if (libraries.isEmpty()) {
+            return@withContext LibraryScan(emptyList(), emptyMap())
+        }
         val startedAt = android.os.SystemClock.elapsedRealtime()
 
         val cached = runCatching { cache?.loadTrackMeta().orEmpty() }.getOrDefault(emptyMap())
         val files = mutableListOf<FileEntry>()
+        val artistImages = mutableMapOf<String, ArtistImage>()
         libraries.forEach { tree ->
             coroutineContext.ensureActive()
-            collect(context, Uri.parse(tree), files)
+            collect(context, Uri.parse(tree), files, artistImages)
         }
 
         val parsed = coroutineScope {
@@ -105,12 +146,13 @@ object MusicLibrary {
         if (android.util.Log.isLoggable(TAG, android.util.Log.DEBUG)) {
             android.util.Log.d(
                 TAG,
-                "scan: ${files.size} files, ${fresh.size} parsed, " +
+                "scan: ${tracks.size} tracks, ${fresh.size} parsed, " +
+                    "${artistImages.size} artist folders, " +
                     "${android.os.SystemClock.elapsedRealtime() - startedAt} ms",
             )
         }
 
-        tracks
+        LibraryScan(tracks, matchArtistImages(tracks, artistImages))
     }
 
     // ------------------------------------------------------------------ walking
@@ -130,12 +172,21 @@ object MusicLibrary {
         Document.COLUMN_LAST_MODIFIED,
     )
 
-    private suspend fun collect(context: Context, tree: Uri, out: MutableList<FileEntry>) {
+    private suspend fun collect(
+        context: Context,
+        tree: Uri,
+        out: MutableList<FileEntry>,
+        artistImages: MutableMap<String, ArtistImage>,
+    ) {
         val rootId = runCatching { DocumentsContract.getTreeDocumentId(tree) }.getOrNull()
         if (rootId != null) {
             val fast = mutableListOf<FileEntry>()
             try {
-                walkTree(context, tree, rootId, fast)
+                // A library root can itself be an artist folder, so its name is worth
+                // resolving before the walk decides what an `artist.jpg` belongs to.
+                val rootName = runCatching { DocumentFile.fromTreeUri(context, tree)?.name }
+                    .getOrNull()
+                walkTree(context, tree, rootId, rootName, fast, artistImages)
                 out += fast
                 return
             } catch (c: CancellationException) {
@@ -146,20 +197,32 @@ object MusicLibrary {
         }
 
         val root = runCatching { DocumentFile.fromTreeUri(context, tree) }.getOrNull() ?: return
-        collectDocumentFile(context, root, out)
+        collectDocumentFile(context, root, out, artistImages)
     }
 
-    /** One query per directory: id, name, type, size and mtime for every child at once. */
+    /**
+     * One query per directory: id, name, type, size and mtime for every child at once.
+     *
+     * Subfolders are walked after their directory's entries have been read, so an
+     * `artist.jpg` is known before any album below it. The sidecar is attached to the
+     * folder name rather than to a track, because it names the artist folder and the
+     * same album can hold songs whose tags disagree about the artist.
+     */
     private suspend fun walkTree(
         context: Context,
         tree: Uri,
         parentId: String,
+        dirName: String?,
         out: MutableList<FileEntry>,
+        artistImages: MutableMap<String, ArtistImage>,
     ) {
         coroutineContext.ensureActive()
         val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, parentId)
         val cursor = context.contentResolver.query(children, PROJECTION, null, null, null)
             ?: throw IllegalStateException("provider returned no cursor")
+
+        val childDirs = mutableListOf<Pair<String, String>>()
+        var folderImage: ArtistImage? = null
 
         cursor.use { c ->
             val idIndex = c.getColumnIndex(Document.COLUMN_DOCUMENT_ID)
@@ -179,17 +242,27 @@ object MusicLibrary {
                 if (isHiddenName(name)) continue
                 val mime = if (mimeIndex >= 0) c.getString(mimeIndex) else null
                 if (mime == Document.MIME_TYPE_DIR) {
-                    walkTree(context, tree, documentId, out)
+                    childDirs += documentId to name
                     continue
                 }
-
-                val extension = name.substringAfterLast('.', "").lowercase()
-                if (extension !in AUDIO_EXTENSIONS) continue
-                if (mime != null && mime.startsWith("image/")) continue
 
                 val size = if (sizeIndex >= 0 && !c.isNull(sizeIndex)) c.getLong(sizeIndex) else 0L
                 val modified =
                     if (modifiedIndex >= 0 && !c.isNull(modifiedIndex)) c.getLong(modifiedIndex) else 0L
+
+                if (isArtistImageName(name)) {
+                    folderImage = ArtistImage(
+                        uri = DocumentsContract.buildDocumentUriUsingTree(tree, documentId),
+                        modifiedMs = modified,
+                        sizeBytes = size,
+                    )
+                    continue
+                }
+
+                val extension = name.substringAfterLast('.', "").lowercase(Locale.ROOT)
+                if (extension !in AUDIO_EXTENSIONS) continue
+                if (mime != null && mime.startsWith("image/")) continue
+
                 out += FileEntry(
                     uri = DocumentsContract.buildDocumentUriUsingTree(tree, documentId),
                     name = name,
@@ -198,6 +271,14 @@ object MusicLibrary {
                 )
             }
         }
+
+        folderImage?.let { image ->
+            artistImageKey(dirName.orEmpty())?.let { artistImages[it] = image }
+        }
+        childDirs.forEach { (id, name) ->
+            coroutineContext.ensureActive()
+            walkTree(context, tree, id, name, out, artistImages)
+        }
     }
 
     /** Fallback for providers that do not support the bulk child query. */
@@ -205,17 +286,33 @@ object MusicLibrary {
         context: Context,
         dir: DocumentFile,
         out: MutableList<FileEntry>,
+        artistImages: MutableMap<String, ArtistImage>,
     ) {
         coroutineContext.ensureActive()
         val children = runCatching { dir.listFiles() }.getOrDefault(emptyArray())
+
+        // Found before recursing for the same reason as the fast path: children arrive
+        // in no particular order.
+        children.firstOrNull { child ->
+            !child.isDirectory && isArtistImageName(child.name.orEmpty())
+        }?.let { image ->
+            artistImageKey(dir.name.orEmpty())?.let { key ->
+                artistImages[key] = ArtistImage(
+                    uri = image.uri,
+                    modifiedMs = runCatching { image.lastModified() }.getOrDefault(0L),
+                    sizeBytes = runCatching { image.length() }.getOrDefault(0L),
+                )
+            }
+        }
+
         children.forEach { child ->
             coroutineContext.ensureActive()
             val name = child.name ?: return@forEach
             if (isHiddenName(name)) return@forEach
             if (child.isDirectory) {
-                collectDocumentFile(context, child, out)
+                collectDocumentFile(context, child, out, artistImages)
             } else {
-                val extension = name.substringAfterLast('.', "").lowercase()
+                val extension = name.substringAfterLast('.', "").lowercase(Locale.ROOT)
                 if (extension !in AUDIO_EXTENSIONS) return@forEach
                 out += FileEntry(
                     uri = child.uri,
@@ -223,6 +320,28 @@ object MusicLibrary {
                     sizeBytes = runCatching { child.length() }.getOrDefault(0L),
                     modifiedMs = runCatching { child.lastModified() }.getOrDefault(0L),
                 )
+            }
+        }
+    }
+
+    /**
+     * Pairs each discovered sidecar with the artist tags it names.
+     *
+     * Tracks are the source of truth for which artist names exist; a folder that matches
+     * none (a compilation folder, or an album-level image) is simply not used.
+     */
+    private fun matchArtistImages(
+        tracks: List<Track>,
+        imagesByFolder: Map<String, ArtistImage>,
+    ): Map<String, ArtistImage> {
+        if (imagesByFolder.isEmpty()) return emptyMap()
+        return buildMap {
+            tracks.forEach { track ->
+                val artist = track.artist?.trim()?.takeIf { it.isNotEmpty() } ?: return@forEach
+                if (containsKey(artist)) return@forEach
+                artistImageKey(artist)?.let { key ->
+                    imagesByFolder[key]?.let { put(artist, it) }
+                }
             }
         }
     }

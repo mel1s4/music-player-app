@@ -62,7 +62,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * Artwork editor for an album (squircle, sidecar `cover.jpg`) or an artist
- * (circle, stored in the app — artists have no folder on disk).
+ * (circle, the scan's copy of `artist.jpg` or an image picked here, which then wins).
  */
 @Composable
 fun EditCollectionScreen(

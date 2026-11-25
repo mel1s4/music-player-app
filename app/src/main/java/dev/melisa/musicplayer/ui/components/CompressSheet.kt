@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import dev.melisa.musicplayer.R
+import dev.melisa.musicplayer.compression.CompressJobState
 import dev.melisa.musicplayer.data.AudioFileDetails
 import dev.melisa.musicplayer.data.AudioFileInfo
 import dev.melisa.musicplayer.data.CompressAudio
@@ -49,32 +50,19 @@ import dev.melisa.musicplayer.data.Track
 import dev.melisa.musicplayer.ui.theme.cyberClick
 import kotlin.math.roundToInt
 
-/** Everything the sheet needs to render while the queue runs in the app shell. */
-data class CompressUiState(
-    val running: Boolean = false,
-    val done: Boolean = false,
-    val cancelled: Boolean = false,
-    val progress: Float = 0f,
-    val currentTitle: String? = null,
-    val completed: Int = 0,
-    val total: Int = 0,
-    val freedBytes: Long = 0L,
-    val failed: Int = 0,
-    val kept: Int = 0,
-    val skipped: Int = 0,
-    val failure: CompressFailure? = null,
-)
-
 /**
  * The one thing this dialog is allowed to be: honest about the trade.
  *
  * Size before and after, the generation-loss warning for lossy sources, and a keep-original
  * switch that is on by default. The conversion only starts after the user sees the number.
+ *
+ * [state] is owned by the background job, not by this composition: the sheet is a view
+ * of a run that survives rotation and backgrounding.
  */
 @Composable
 fun CompressSheet(
     tracks: List<Track>,
-    state: CompressUiState,
+    state: CompressJobState,
     onDismiss: () -> Unit,
     onStart: (bitrateKbps: Int, keepOriginal: Boolean) -> Unit,
     onCancel: () -> Unit,
@@ -385,7 +373,7 @@ private fun BitrateRow(
 }
 
 @Composable
-private fun CompressProgress(state: CompressUiState, onCancel: () -> Unit) {
+private fun CompressProgress(state: CompressJobState, onCancel: () -> Unit) {
     Spacer(Modifier.height(16.dp))
     Text(
         text = stringResource(R.string.compress_running),
@@ -434,7 +422,7 @@ private fun CompressProgress(state: CompressUiState, onCancel: () -> Unit) {
 }
 
 @Composable
-private fun CompressSummary(state: CompressUiState, onDismiss: () -> Unit) {
+private fun CompressSummary(state: CompressJobState, onDismiss: () -> Unit) {
     Spacer(Modifier.height(14.dp))
     Text(
         text = when {

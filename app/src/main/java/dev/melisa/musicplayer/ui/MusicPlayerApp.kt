@@ -79,6 +79,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -111,14 +112,15 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import dev.melisa.musicplayer.R
+import dev.melisa.musicplayer.compression.CompressPhase
+import dev.melisa.musicplayer.compression.CompressionRunner
 import dev.melisa.musicplayer.data.AppSettings
+import dev.melisa.musicplayer.data.ArtistArt
 import dev.melisa.musicplayer.data.AudioFileDetails
-import dev.melisa.musicplayer.data.CompressAudio
-import dev.melisa.musicplayer.data.CompressFailure
-import dev.melisa.musicplayer.data.CompressOutcome
 import dev.melisa.musicplayer.data.FolderReorder
 import dev.melisa.musicplayer.data.HoldingHand
 import dev.melisa.musicplayer.data.LibraryExtras
+import dev.melisa.musicplayer.data.LibraryScan
 import dev.melisa.musicplayer.data.MetadataApplyOutcome
 import dev.melisa.musicplayer.data.MetadataWriteFailure
 import dev.melisa.musicplayer.data.MovedTrack
@@ -140,7 +142,6 @@ import dev.melisa.musicplayer.ui.components.BulkSelectionBar
 import dev.melisa.musicplayer.ui.components.BulkTagsDialog
 import dev.melisa.musicplayer.ui.components.BulkTextFieldDialog
 import dev.melisa.musicplayer.ui.components.CompressSheet
-import dev.melisa.musicplayer.ui.components.CompressUiState
 import dev.melisa.musicplayer.ui.components.CyberDivider
 import dev.melisa.musicplayer.ui.components.EqualizerBars
 import dev.melisa.musicplayer.ui.components.LocalSongSelection
@@ -209,6 +210,11 @@ fun MusicPlayerApp(settings: AppSettings) {
     val context = LocalContext.current
     val extras = remember { LibraryExtras(context) }
 
+    // A rotation replaces the screen's LibraryExtras while a background run still
+    // holds the old instance. Attaching replays the rekeys it already made, so the
+    // new instance's favourites, ratings, tags and playlists match the files.
+    LaunchedEffect(extras) { CompressionRunner.attach(extras) }
+
     LaunchedEffect(settings.syncToFiles) {
         extras.syncToFiles = settings.syncToFiles
         if (!settings.syncToFiles) SongFileSync.cancelPending()
@@ -262,13 +268,15 @@ fun MusicPlayerApp(settings: AppSettings) {
     // cache at all, the list screens show their full scanning state instead.
     LaunchedEffect(settings.libraries, refreshToken) {
         isScanning = true
+        var scanned: LibraryScan? = null
         try {
-            val scanned = MusicLibrary.scan(context, settings.libraries, extras.trackMetaCache)
-            tracks = scanned
+            val result = MusicLibrary.scan(context, settings.libraries, extras.trackMetaCache)
+            scanned = result
+            tracks = result.tracks
             // First-seen stamps order Songs by date added.
-            extras.registerAdded(scanned.map { it.uri.toString() to it.lastModifiedMs })
+            extras.registerAdded(result.tracks.map { it.uri.toString() to it.lastModifiedMs })
             nowPlaying = nowPlaying?.let { old ->
-                scanned.firstOrNull { it.uri == old.uri } ?: old
+                result.tracks.firstOrNull { it.uri == old.uri } ?: old
             }
         } catch (c: CancellationException) {
             throw c
@@ -279,6 +287,25 @@ fun MusicPlayerApp(settings: AppSettings) {
             if (tracks == null) tracks = emptyList()
         } finally {
             isScanning = false
+        }
+
+        // The walk also found `artist.jpg` beside the artist folders. Importing after the
+        // list is on screen keeps the scan's first paint fast; the art bump replaces the
+        // archive's cached monograms with the portraits instead of waiting for a restart.
+        // A failed scan never reaches this: `scanned` stays null so nothing is pruned.
+        scanned?.let { scan ->
+            val imported = try {
+                ArtistArt.sync(context, scan.artistImages)
+            } catch (c: CancellationException) {
+                throw c
+            } catch (t: Throwable) {
+                android.util.Log.w(TAG, "artist image import failed", t)
+                false
+            }
+            if (imported) {
+                SongArt.invalidate()
+                artVersion++
+            }
         }
     }
 
@@ -463,12 +490,15 @@ fun MusicPlayerApp(settings: AppSettings) {
     var bulkEditTotal by remember { mutableStateOf(0) }
     var bulkEditMessage by remember { mutableStateOf<String?>(null) }
 
-    // Compression: the sheet is global so a batch keeps running while the user browses.
-    var compressTracks by remember { mutableStateOf<List<Track>?>(null) }
-    var compressState by remember { mutableStateOf(CompressUiState()) }
-    var compressJob by remember { mutableStateOf<Job?>(null) }
+    // Compression: the queue lives in CompressionRunner (backed by a foreground
+    // service), so a batch keeps running while the app is in the background and the
+    // sheet can be rebuilt from that state after the activity is recreated.
+    // compressPick is only the selection on the setup step, before a run exists.
+    var compressPick by remember { mutableStateOf<List<Track>?>(null) }
+    val compressState by CompressionRunner.state.collectAsState()
+    val compressTracks = compressPick
+        ?: compressState.tracks.takeIf { compressState.phase != CompressPhase.Idle }
     var showFreeSpace by rememberSaveable { mutableStateOf(false) }
-    val compressScope = rememberCoroutineScope()
     val deleteScope = rememberCoroutineScope()
 
     // Folder reordering is a batch too; the dialog lives above the tabs so switching
@@ -567,16 +597,16 @@ fun MusicPlayerApp(settings: AppSettings) {
     }
 
     fun openCompress(selection: List<Track>) {
-        if (compressState.running || selection.isEmpty()) return
-        compressTracks = selection
-        compressState = CompressUiState()
+        if (CompressionRunner.isRunning || selection.isEmpty()) return
+        // A previous run's summary stops being relevant once a new sheet opens.
+        CompressionRunner.acknowledge()
+        compressPick = selection
     }
 
     fun closeCompress() {
-        if (compressState.running) return
-        compressTracks = null
-        compressState = CompressUiState()
-        compressJob = null
+        if (CompressionRunner.isRunning) return
+        compressPick = null
+        CompressionRunner.acknowledge()
     }
 
     /**
@@ -1024,97 +1054,28 @@ fun MusicPlayerApp(settings: AppSettings) {
 
     fun startCompression(bitrateKbps: Int, keepOriginal: Boolean) {
         val batch = compressTracks ?: return
-        if (batch.isEmpty() || compressState.running) return
-
-        // A queued tag write copies the whole file; letting it run while the transcoder
-        // reads the same file can hand the decoder a half-rewritten one. Dropping the
-        // queue is safe: the database stays correct and the next edit rewrites the tags.
-        SongFileSync.cancelPending()
-
-        val eligible = batch.filter { track ->
-            CompressAudio.willSave(track.sizeBytes, track.durationMs, bitrateKbps)
+        if (batch.isEmpty() || CompressionRunner.isRunning) return
+        if (CompressionRunner.start(context, extras, batch, bitrateKbps, keepOriginal)) {
+            // From here the sheet renders the job's state instead of the selection.
+            compressPick = null
         }
-        if (eligible.isEmpty()) return
-        val skipped = batch.size - eligible.size
+    }
 
-        compressState = CompressUiState(
-            running = true,
-            total = eligible.size,
-            currentTitle = eligible.first().title,
-            skipped = skipped,
-        )
-        compressJob = compressScope.launch {
-            var freed = 0L
-            var failed = 0
-            var kept = 0
-            var lastFailure: CompressFailure? = null
-            var cancelled = false
-            try {
-                eligible.forEachIndexed { index, track ->
-                    compressState = compressState.copy(
-                        currentTitle = track.title,
-                        completed = index,
-                        progress = 0f,
-                    )
-                    val outcome = CompressAudio.compress(
-                        context = context,
-                        source = track.uri,
-                        targetBitrateKbps = bitrateKbps,
-                        keepOriginal = keepOriginal,
-                        sourceBytes = track.sizeBytes,
-                        sourceDurationMs = track.durationMs,
-                    ) { fraction ->
-                        compressState = compressState.copy(
-                            progress = (index + fraction) / eligible.size,
-                        )
-                    }
-
-                    when (outcome) {
-                        is CompressOutcome.Success -> {
-                            val result = outcome.result
-                            val oldUri = track.uri.toString()
-                            val newUri = result.newUri.toString()
-                            if (result.replaced) {
-                                extras.rekey(oldUri, newUri)
-                                freed += (result.sourceBytes - result.newBytes).coerceAtLeast(0L)
-                                replacePlayingTrack(track, result.newUri)
-                            } else {
-                                extras.copyState(oldUri, newUri)
-                                kept++
-                            }
-                            if (editingTrack?.uri == track.uri) {
-                                editingTrack = track.copy(uri = result.newUri)
-                            }
-                        }
-
-                        is CompressOutcome.Failure -> {
-                            failed++
-                            lastFailure = outcome.reason
-                            android.util.Log.w(
-                                "CompressQueue",
-                                "failed: ${track.title} ${outcome.reason}",
-                            )
-                        }
-                    }
-                }
-            } catch (_: CancellationException) {
-                cancelled = true
-            } finally {
-                compressState = compressState.copy(
-                    running = false,
-                    done = true,
-                    cancelled = cancelled,
-                    progress = if (cancelled) compressState.progress else 1f,
-                    completed = eligible.size,
-                    freedBytes = freed,
-                    failed = failed,
-                    kept = kept,
-                    skipped = skipped,
-                    failure = if (eligible.size == 1 && failed == 1) lastFailure else null,
-                )
-                refreshToken++
+    // The background job swaps files underneath the app. Re-point the visible player
+    // and the open editor at the new URI; the database was already rekeyed there.
+    LaunchedEffect(compressState.swaps) {
+        compressState.swaps.forEach { swap ->
+            replacePlayingTrack(swap.track, swap.newUri)
+            if (editingTrack?.uri == swap.track.uri) {
+                editingTrack = swap.track.copy(uri = swap.newUri)
             }
         }
+    }
+
+    // New URIs only reach the library list once the scan runs again; doing it at the
+    // end (not per track) keeps the scanner away from files the encoder is reading.
+    LaunchedEffect(compressState.phase) {
+        if (compressState.phase == CompressPhase.Done) refreshToken++
     }
 
     fun openAddToPlaylist(track: Track) {
@@ -2232,7 +2193,7 @@ fun MusicPlayerApp(settings: AppSettings) {
                 onStart = { bitrateKbps, keepOriginal ->
                     startCompression(bitrateKbps, keepOriginal)
                 },
-                onCancel = { compressJob?.cancel() },
+                onCancel = { CompressionRunner.cancel() },
             )
         }
 

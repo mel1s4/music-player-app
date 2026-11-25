@@ -14,6 +14,30 @@ project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - More library statistics, and a listening-history screen built on the recorded play
   timestamps.
 
+## [0.7.2] - 2026-11-24
+
+### Added
+
+- **Artist images from the library.** A scan now looks for an `artist.jpg` beside each
+  artist's folders, copies it into the app and shows it on the artist's archive card,
+  in the artwork editor and as the fallback cover in the player. Folder names are
+  matched to tag names ignoring case, accents, punctuation and Unicode form (macOS
+  stores accents decomposed), so a folder-organized library resolves its portraits
+  without renaming anything. An image picked in the artist editor still wins, and
+  replacing or deleting a sidecar is picked up by the next scan.
+- **Compression runs in the background.** A batch now converts in a foreground service
+  with a progress notification, a **Stop** action and a partial wake lock, so sending the
+  app to the background or rotating the device no longer interrupts it. The sheet is
+  rebuilt from the job's live state when the activity returns, a finished run leaves a
+  summary notification, and the player re-points at each rewritten file so playback
+  survives a replace even while no activity is alive.
+
+### Changed
+
+- Starring an album or artist no longer removes it from the alphabetical archive. The
+  collection is pinned in the **Starred** block and stays in its letter section, with
+  the filled star as the only marker that it is pinned.
+
 ## [0.7.1] - 2026-11-24
 
 ### Added
@@ -257,7 +281,8 @@ The first public release.
   snapshot.
 - A failed scan no longer leaves the list stuck in a permanent scanning state.
 
-[Unreleased]: https://github.com/mel1s4/music-player-app/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/mel1s4/music-player-app/compare/v0.7.2...HEAD
+[0.7.2]: https://github.com/mel1s4/music-player-app/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/mel1s4/music-player-app/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/mel1s4/music-player-app/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/mel1s4/music-player-app/compare/v0.6.0...v0.6.1

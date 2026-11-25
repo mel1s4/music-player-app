@@ -141,16 +141,15 @@ fun CollectionsBrowserScreen(
     val starredEntries = remember(sorted, starred) {
         sorted.filter { starred.contains(it.name) }
     }
-    val regularEntries = remember(sorted, starred) {
-        sorted.filterNot { starred.contains(it.name) }
-    }
-    val sections = remember(regularEntries, sort) {
-        sectionsFor(regularEntries, sort)
+    // Starred entries are pinned above the archive but stay in the alphabetical
+    // sections too: starring a collection is a shortcut, not a way to hide it.
+    val sections = remember(sorted, sort) {
+        sectionsFor(sorted, sort)
     }
 
     if (isArtist) {
         CollectionGrid(
-            entries = regularEntries,
+            entries = sorted,
             totalCount = sorted.size,
             starredEntries = starredEntries,
             sections = sections,
@@ -169,7 +168,7 @@ fun CollectionsBrowserScreen(
         }
     } else {
         CollectionGrid(
-            entries = regularEntries,
+            entries = sorted,
             totalCount = sorted.size,
             starredEntries = starredEntries,
             sections = sections,
